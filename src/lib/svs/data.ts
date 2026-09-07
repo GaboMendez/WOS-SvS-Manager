@@ -12,12 +12,54 @@ import {
   type Weights,
 } from "./types";
 
-const ALLIANCE_TOKENS = ["all-1", "all-2", "all-3", "all-4", "all-5", "all-6"] as const;
+const ALLIANCE_TOKENS = [
+  "all-1",
+  "all-2",
+  "all-3",
+  "all-4",
+  "all-5",
+  "all-6",
+  "all-7",
+  "all-8",
+  "all-9",
+  "all-10",
+] as const;
+// Mirrors the --all-1..10 custom properties in styles.css. Charting libs (recharts) sometimes
+// parse fill colors numerically for hover/legend states, which fails silently on var(...)
+// strings, so callers doing that should use allianceColor() instead of the CSS variable.
+const ALLIANCE_COLORS = [
+  "oklch(0.692 0.198 23.8)",
+  "oklch(0.772 0.13 221.7)",
+  "oklch(0.879 0.162 90.9)",
+  "oklch(0.709 0.159 293.5)",
+  "oklch(0.705 0.187 47.6)",
+  "oklch(0.8 0.182 151.7)",
+  "oklch(0.72 0.19 338)",
+  "oklch(0.76 0.14 187)",
+  "oklch(0.72 0.16 257)",
+  "oklch(0.8 0.17 121)",
+] as const;
+
+// Assigned in first-seen order (not hashed) so distinct tags never collide on the same color
+// as long as there are no more alliances than palette slots; stable for the life of the tab.
+const allianceSlots = new Map<string, number>();
+
+function allianceIndex(tag: string): number {
+  const key = tag || "—";
+  let idx = allianceSlots.get(key);
+  if (idx === undefined) {
+    idx = allianceSlots.size % ALLIANCE_TOKENS.length;
+    allianceSlots.set(key, idx);
+  }
+  return idx;
+}
 
 export function allianceToken(tag: string): string {
-  let h = 0;
-  for (const ch of tag.toUpperCase()) h = (h * 31 + ch.charCodeAt(0)) % 997;
-  return ALLIANCE_TOKENS[h % ALLIANCE_TOKENS.length] ?? "all-1";
+  return ALLIANCE_TOKENS[allianceIndex(tag)] ?? "all-1";
+}
+
+export function allianceColor(tag: string): string {
+  return ALLIANCE_COLORS[allianceIndex(tag)] ?? ALLIANCE_COLORS[0];
 }
 
 export function useRoster() {

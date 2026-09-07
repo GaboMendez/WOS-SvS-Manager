@@ -48,6 +48,10 @@
   --color-all-4: var(--all-4);
   --color-all-5: var(--all-5);
   --color-all-6: var(--all-6);
+  --color-all-7: var(--all-7);
+  --color-all-8: var(--all-8);
+  --color-all-9: var(--all-9);
+  --color-all-10: var(--all-10);
 }
 
 :root {
@@ -70,6 +74,10 @@
   --all-4: oklch(0.709 0.159 293.5);
   --all-5: oklch(0.705 0.187 47.6);
   --all-6: oklch(0.8 0.182 151.7);
+  --all-7: oklch(0.72 0.19 338);
+  --all-8: oklch(0.76 0.14 187);
+  --all-9: oklch(0.72 0.16 257);
+  --all-10: oklch(0.8 0.17 121);
 }
 
 @keyframes slotfill {

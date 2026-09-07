@@ -53,7 +53,7 @@ function ImportPage() {
           recompute.mutate(undefined, {
             onSuccess: (r) => {
               toast.success(`Saved · ${r.scheduled} appointments assigned`);
-              navigate({ to: "/", search: { day: "monday" } });
+              navigate({ to: "/board", search: { day: "monday" } });
             },
             onError: (e) => toast.error(e.message),
           }),

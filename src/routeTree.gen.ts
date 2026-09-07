@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BoardRouteImport } from './routes/board'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as PlayersRouteImport } from './routes/players'
@@ -18,6 +19,11 @@ import { Route as ScoringRouteImport } from './routes/scoring'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BoardRoute = BoardRouteImport.update({
+  id: '/board',
+  path: '/board',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImportRoute = ImportRouteImport.update({
@@ -43,6 +49,7 @@ const ScoringRoute = ScoringRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/board': typeof BoardRoute
   '/import': typeof ImportRoute
   '/messages': typeof MessagesRoute
   '/players': typeof PlayersRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/board': typeof BoardRoute
   '/import': typeof ImportRoute
   '/messages': typeof MessagesRoute
   '/players': typeof PlayersRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/board': typeof BoardRoute
   '/import': typeof ImportRoute
   '/messages': typeof MessagesRoute
   '/players': typeof PlayersRoute
@@ -65,14 +74,22 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/import' | '/messages' | '/players' | '/scoring'
+  fullPaths: '/' | '/board' | '/import' | '/messages' | '/players' | '/scoring'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/import' | '/messages' | '/players' | '/scoring'
-  id: '__root__' | '/' | '/import' | '/messages' | '/players' | '/scoring'
+  to: '/' | '/board' | '/import' | '/messages' | '/players' | '/scoring'
+  id:
+    | '__root__'
+    | '/'
+    | '/board'
+    | '/import'
+    | '/messages'
+    | '/players'
+    | '/scoring'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BoardRoute: typeof BoardRoute
   ImportRoute: typeof ImportRoute
   MessagesRoute: typeof MessagesRoute
   PlayersRoute: typeof PlayersRoute
@@ -86,6 +103,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/board': {
+      id: '/board'
+      path: '/board'
+      fullPath: '/board'
+      preLoaderRoute: typeof BoardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/import': {
@@ -121,6 +145,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BoardRoute: BoardRoute,
   ImportRoute: ImportRoute,
   MessagesRoute: MessagesRoute,
   PlayersRoute: PlayersRoute,

@@ -13,7 +13,7 @@ function railClass(active: boolean) {
 
 function DayLink({ day, label, active }: { day: DayKey; label: string; active: boolean }) {
   return (
-    <Link to="/" search={{ day }} className={railClass(active)}>
+    <Link to="/board" search={{ day }} className={railClass(active)}>
       <span>{label}</span>
       {active ? <span className="font-mono text-[10px] text-primary">LIVE</span> : null}
     </Link>
@@ -25,7 +25,7 @@ function PageLink({
   active,
   children,
 }: {
-  to: "/import" | "/players" | "/scoring" | "/messages";
+  to: "/" | "/import" | "/players" | "/scoring" | "/messages";
   active: boolean;
   children: ReactNode;
 }) {
@@ -56,7 +56,7 @@ export function AppShell({
       }
     >
       <aside className="border-r border-line bg-panel md:min-h-screen">
-        <div className="px-4 py-4 border-b border-line flex items-center gap-2.5">
+        <Link to="/" className="px-4 py-4 border-b border-line flex items-center gap-2.5">
           <div className="size-10 grid place-items-center bg-primary text-primary-foreground font-bold text-sm">
             3496
           </div>
@@ -64,9 +64,15 @@ export function AppShell({
             <p className="font-semibold text-[16px] tracking-tight">SvS Preparation</p>
             <p className="text-[12px] font-mono text-mut mt-1.5">DUTY ROSTER</p>
           </div>
-        </div>
+        </Link>
         <nav className="py-3 flex flex-col gap-0.5">
           <div className="px-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
+            Home
+          </div>
+          <PageLink to="/" active={pathname === "/"}>
+            Overview
+          </PageLink>
+          <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
             Days
           </div>
           {DAYS.map((d) => (
@@ -74,7 +80,7 @@ export function AppShell({
               key={d.key}
               day={d.key}
               label={d.label}
-              active={pathname === "/" && activeDay === d.key}
+              active={pathname === "/board" && activeDay === d.key}
             />
           ))}
           <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">

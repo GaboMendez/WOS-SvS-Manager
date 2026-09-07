@@ -38,9 +38,12 @@ export function parseCsv(text: string): ParsedImport {
   const rows = (parsed.data ?? []).filter((r) => Array.isArray(r) && r.length > 1);
   const warnings: ParseWarning[] = [];
 
-  // Drop header row if the second cell doesn't look like data.
+  // Drop header row if it looks like a header: either the timestamp column says so (English or
+  // German Google Forms exports), or the player ID column isn't a plain number like real IDs are.
   const first = rows[0] ?? [];
-  const hasHeader = /timestamp/i.test(String(first[0] ?? ""));
+  const hasHeader =
+    /timestamp|zeitstempel/i.test(String(first[0] ?? "")) ||
+    !/^\d+$/.test(String(first[2] ?? "").trim());
   const body = hasHeader ? rows.slice(1) : rows;
 
   const latest = new Map<string, { player: Player; submission: Submission }>();
