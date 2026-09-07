@@ -161,7 +161,7 @@ export function AppShell({
             (mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0")
           }
         >
-          <div className="flex h-full flex-col">{nav}</div>
+          <div className="flex h-full flex-col md:sticky md:top-0 md:h-screen md:overflow-y-auto">{nav}</div>
         </aside>
 
         <main className="min-w-0 bg-ink md:col-start-2">{children}</main>
