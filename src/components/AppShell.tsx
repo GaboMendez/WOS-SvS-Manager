@@ -137,9 +137,6 @@ export function AppShell({
           <div className="size-8 grid place-items-center bg-primary text-primary-foreground font-bold text-[11px]">
             3496
           </div>
-          <div className="leading-none">
-            <p className="font-semibold text-[14px] tracking-tight">SvS Prep</p>
-          </div>
         </Link>
       </div>
 
