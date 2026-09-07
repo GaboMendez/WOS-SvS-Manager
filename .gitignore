@@ -24,6 +24,9 @@ dist-ssr
 .env
 .env.local
 
+# Real sign-up export with player data — not for version control
+SVS Prep Signup Template - Formularantworten 1.csv
+
 # Supabase CLI local cache
 supabase/.temp
 
