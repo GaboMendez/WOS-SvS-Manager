@@ -28,9 +28,9 @@ const FIELDS: { key: keyof Weights; label: string; hint: string }[] = [
   { key: "normalFireCrystal", label: "Normal fire crystal", hint: "Monday · points each" },
   { key: "refinedFireCrystal", label: "Refined fire crystal", hint: "Monday · points each" },
   {
-    key: "mondaySpeedupDay",
-    label: "Construction speedup day",
-    hint: "Monday · 0 by default (captured but unscored)",
+    key: "constructionSpeedupMinute",
+    label: "Construction speedup minute",
+    hint: "Monday · points per minute",
   },
   { key: "fireCrystalShard", label: "Fire crystal shard", hint: "Tuesday · points each" },
   {
@@ -41,7 +41,7 @@ const FIELDS: { key: keyof Weights; label: string; hint: string }[] = [
   {
     key: "daysToMinutes",
     label: "Days to minutes",
-    hint: "Tuesday · conversion, 1 day = 1,440 minutes",
+    hint: "Monday & Tuesday · conversion, 1 day = 1,440 minutes",
   },
   { key: "trainingSpeedupDay", label: "Training speedup day", hint: "Thursday · points per day" },
 ];

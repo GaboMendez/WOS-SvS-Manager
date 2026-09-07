@@ -9,7 +9,7 @@ export const DAYS: { key: DayKey; label: string; focus: string }[] = [
 export type Weights = {
   normalFireCrystal: number;
   refinedFireCrystal: number;
-  mondaySpeedupDay: number;
+  constructionSpeedupMinute: number;
   fireCrystalShard: number;
   researchSpeedupMinute: number;
   daysToMinutes: number;
@@ -19,7 +19,7 @@ export type Weights = {
 export const DEFAULT_WEIGHTS: Weights = {
   normalFireCrystal: 2000,
   refinedFireCrystal: 30000,
-  mondaySpeedupDay: 0,
+  constructionSpeedupMinute: 30,
   fireCrystalShard: 1000,
   researchSpeedupMinute: 30,
   daysToMinutes: 1440,

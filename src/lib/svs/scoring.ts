@@ -2,10 +2,11 @@ import type { DayKey, Submission, Weights } from "./types";
 
 export function scoreFor(day: DayKey, s: Submission, w: Weights): number {
   if (day === "monday") {
+    const minutes = s.mon_speedup_days * w.daysToMinutes;
     return (
       s.mon_normal_fc * w.normalFireCrystal +
       s.mon_refined_fc * w.refinedFireCrystal +
-      s.mon_speedup_days * w.mondaySpeedupDay
+      minutes * w.constructionSpeedupMinute
     );
   }
   if (day === "tuesday") {
