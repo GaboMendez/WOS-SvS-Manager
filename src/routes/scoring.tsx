@@ -64,7 +64,9 @@ function ScoringPage() {
       onSuccess: () =>
         recompute.mutate(undefined, {
           onSuccess: (r) =>
-            toast.success(`Weights saved · ${r.scheduled} appointments, ${r.waitlisted} waitlisted`),
+            toast.success(
+              `Weights saved · ${r.scheduled} appointments, ${r.waitlisted} waitlisted`,
+            ),
           onError: (e) => toast.error(e.message),
         }),
       onError: (e) => toast.error(e.message),
@@ -107,7 +109,11 @@ function ScoringPage() {
             aria-disabled={isProductionReadOnly || undefined}
             className="text-sm font-medium px-4 py-2 rounded-md bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {save.isPending || recompute.isPending ? "Recomputing…" : isProductionReadOnly ? "Scoring locked in production" : "Save and recompute schedule"}
+            {save.isPending || recompute.isPending
+              ? "Recomputing…"
+              : isProductionReadOnly
+                ? "Scoring locked in production"
+                : "Save and recompute schedule"}
           </button>
           <button
             onClick={() => setDraft(DEFAULT_WEIGHTS)}
@@ -121,12 +127,15 @@ function ScoringPage() {
 
         {isProductionReadOnly && (
           <p className="font-mono text-[11px] text-amber-400 pt-1">
-            Scoring is read-only in production.
+            Scoring weights are read-only in production.
           </p>
         )}
 
         <p className="font-mono text-[11px] text-mut pt-2">
-          Monday = crystals · Tuesday = shards + speedup minutes · Thursday = training speedup days.
+          Monday = fire crystals + refined fire crystals + construction speedups. <br></br>
+          Tuesday = fire crystal shards + research speedups. <br></br> Thursday = training speedups.{" "}
+          <br></br>
+          <br></br>
           Ties go to the earliest submission.
         </p>
       </div>
