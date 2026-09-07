@@ -137,6 +137,29 @@ function ImportPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
+            <p className="text-sm font-semibold tracking-tight">How it works</p>
+            <ul className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-disc list-inside">
+              <li>
+                Only the latest submission per Player ID is kept — older duplicates are dropped.
+              </li>
+              <li>
+                Each player gets a priority score for the day based on what they submitted (fire
+                crystals, rfc, fc shards, speedups, etc.), weighted using the settings on the
+                Scoring page.
+              </li>
+              <li>
+                Players with higher scores get seated first. If their preferred time is taken by
+                someone with a lower score, that person is moved to another time they also said
+                works for them — so nobody loses their spot, they just might get a different one of
+                their own preferred hours. Only if there's truly no open time left among a player's
+                choices do they end up on the waitlist.
+              </li>
+              <li>
+                Re-importing replaces all data; you can still adjust slots manually afterward.
+              </li>
+            </ul>
+          </div>
+          <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
             <p className="text-sm font-semibold tracking-tight">How to use</p>
             <ol className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-decimal list-inside">
               <li>
@@ -147,28 +170,6 @@ function ImportPage() {
               <li>Review the parse summary and any validation warnings.</li>
               <li>Click "Save import and build schedule" to store it and auto-assign slots.</li>
             </ol>
-          </div>
-          <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
-            <p className="text-sm font-semibold tracking-tight">How it works</p>
-            <ul className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-disc list-inside">
-              <li>
-                Only the latest submission per Player ID is kept — older duplicates are dropped.
-              </li>
-              <li>
-                Each day's priority score comes from the submitted resources, weighted per the
-                Scoring page.
-              </li>
-              <li>
-                Players with higher scores get seated first. If their preferred time is taken by
-                someone with a lower score, that person is moved to another time they also said
-                works for them — so nobody loses their spot, they just might get a different one
-                of their own preferred hours. Only if there's truly no open time left among a
-                player's choices do they end up on the waitlist.
-              </li>
-              <li>
-                Re-importing replaces all data; you can still adjust slots manually afterward.
-              </li>
-            </ul>
           </div>
         </div>
 
