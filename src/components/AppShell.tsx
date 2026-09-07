@@ -25,7 +25,7 @@ function PageLink({
   active,
   children,
 }: {
-  to: "/import" | "/players" | "/scoring";
+  to: "/import" | "/players" | "/scoring" | "/messages";
   active: boolean;
   children: ReactNode;
 }) {
@@ -77,6 +77,12 @@ export function AppShell({
               active={pathname === "/" && activeDay === d.key}
             />
           ))}
+          <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
+            Messages
+          </div>
+          <PageLink to="/messages" active={pathname === "/messages"}>
+            Summaries
+          </PageLink>
           <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
             Console
           </div>
