@@ -32,6 +32,12 @@ export function parseHours(v: string): number[] {
   return out;
 }
 
+/** Splits raw CSV text into rows/columns for display (e.g. a preview table), no domain parsing. */
+export function parseCsvRows(text: string): string[][] {
+  const parsed = Papa.parse<string[]>(text.trim(), { skipEmptyLines: true });
+  return (parsed.data ?? []).filter((r): r is string[] => Array.isArray(r));
+}
+
 /** Google Forms export: 17 columns, fixed order (see spec). */
 export function parseCsv(text: string): ParsedImport {
   const parsed = Papa.parse<string[]>(text.trim(), { skipEmptyLines: true });

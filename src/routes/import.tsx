@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Download } from "lucide-react";
-import { useState } from "react";
+import { Download, Eye } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { downloadCsv, parseCsv, type ParsedImport } from "@/lib/svs/csv";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { downloadCsv, parseCsv, parseCsvRows, type ParsedImport } from "@/lib/svs/csv";
 import { useImportCsv, useLatestImport, useRecompute } from "@/lib/svs/data";
 
 export const Route = createFileRoute("/import")({
@@ -12,7 +13,8 @@ export const Route = createFileRoute("/import")({
       { title: "Import sign-ups — SvS Prep Scheduler" },
       {
         name: "description",
-        content: "Upload the Google Forms CSV export and review the parse summary before scheduling.",
+        content:
+          "Upload the Google Forms CSV export and review the parse summary before scheduling.",
       },
       { property: "og:title", content: "Import sign-ups — SvS Prep Scheduler" },
       {
@@ -28,10 +30,17 @@ function ImportPage() {
   const [parsed, setParsed] = useState<ParsedImport | null>(null);
   const [raw, setRaw] = useState("");
   const [filename, setFilename] = useState("");
+  const [showCsv, setShowCsv] = useState(false);
   const importCsv = useImportCsv();
   const recompute = useRecompute();
   const latestImport = useLatestImport();
   const navigate = useNavigate();
+  const csvRows = useMemo(
+    () => (latestImport.data ? parseCsvRows(latestImport.data.raw_csv) : []),
+    [latestImport.data],
+  );
+  const csvHeader = csvRows[0] ?? [];
+  const csvBody = csvRows.slice(1);
 
   async function onFile(file: File) {
     const text = await file.text();
@@ -55,7 +64,9 @@ function ImportPage() {
           recompute.mutate(undefined, {
             onSuccess: (r) => {
               toast.success(`Saved · ${r.scheduled} appointments assigned`);
-              navigate({ to: "/board", search: { day: "monday" } });
+              setTimeout(() => {
+                navigate({ to: "/" });
+              }, 700);
             },
             onError: (e) => toast.error(e.message),
           }),
@@ -79,13 +90,23 @@ function ImportPage() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">📊 View Collected Responses</p>
               <p className="font-mono text-[11px] text-mut mt-0.5">
-                {latestImport.data.filename} <br></br> {latestImport.data.row_count} rows · imported{" "}
+                {latestImport.data.filename} · {latestImport.data.row_count} rows imported <br></br>
                 {new Date(latestImport.data.created_at).toLocaleString()}
               </p>
             </div>
             <button
+              onClick={() => setShowCsv(true)}
+              className="text-xs font-medium px-3 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg whitespace-nowrap inline-flex items-center gap-1.5"
+            >
+              <Eye className="size-3.5" />
+              View CSV
+            </button>
+            <button
               onClick={() =>
-                downloadCsv(latestImport.data!.filename || "collected-responses.csv", latestImport.data!.raw_csv)
+                downloadCsv(
+                  latestImport.data!.filename || "collected-responses.csv",
+                  latestImport.data!.raw_csv,
+                )
               }
               className="text-xs font-medium px-3 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg whitespace-nowrap inline-flex items-center gap-1.5"
             >
@@ -97,7 +118,9 @@ function ImportPage() {
 
         <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3 flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">📂 First time? Download sample SvS data to try it out</p>
+            <p className="text-sm font-medium">
+              📂 First time? Download sample SvS data to try it out
+            </p>
             <p className="font-mono text-[11px] text-mut mt-0.5">
               Download the sample CSV, then drag it into the upload zone
             </p>
@@ -117,8 +140,8 @@ function ImportPage() {
             <p className="text-sm font-semibold tracking-tight">How to use</p>
             <ol className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-decimal list-inside">
               <li>
-                Export the "Formularantworten 1" sheet as a .csv from the Excel "Kopie von SVS
-                Prep Signup Template (Antworten)" file <br></br>(File → Download → .csv).
+                Export the "Formularantworten 1" sheet as a .csv from the Excel "Kopie von SVS Prep
+                Signup Template (Antworten)" file <br></br>(File → Download → .csv).
               </li>
               <li>Choose that file in the upload zone below.</li>
               <li>Review the parse summary and any validation warnings.</li>
@@ -128,10 +151,20 @@ function ImportPage() {
           <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
             <p className="text-sm font-semibold tracking-tight">How it works</p>
             <ul className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-disc list-inside">
-              <li>Only the latest submission per Player ID is kept — older duplicates are dropped.</li>
-              <li>Each day's priority score comes from the submitted resources, weighted per the Scoring page.</li>
-              <li>Highest-score players get their preferred UTC hour first; anyone who doesn't fit lands on the waitlist.</li>
-              <li>Re-importing replaces all data; you can still adjust slots manually afterward.</li>
+              <li>
+                Only the latest submission per Player ID is kept — older duplicates are dropped.
+              </li>
+              <li>
+                Each day's priority score comes from the submitted resources, weighted per the
+                Scoring page.
+              </li>
+              <li>
+                Highest-score players get their preferred UTC hour first; anyone who doesn't fit
+                lands on the waitlist.
+              </li>
+              <li>
+                Re-importing replaces all data; you can still adjust slots manually afterward.
+              </li>
             </ul>
           </div>
         </div>
@@ -159,7 +192,9 @@ function ImportPage() {
                 ["Thursday", parsed.counts.thursday],
               ].map(([label, value]) => (
                 <div key={String(label)} className="rounded-md ring-1 ring-line bg-panel px-3 py-3">
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-mut">{label}</p>
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-mut">
+                    {label}
+                  </p>
                   <p className="font-mono text-xl tabular-nums mt-1">{value}</p>
                 </div>
               ))}
@@ -200,6 +235,46 @@ function ImportPage() {
           </>
         ) : null}
       </div>
+
+      <Dialog open={showCsv} onOpenChange={setShowCsv}>
+        <DialogContent className="bg-panel border-line text-fg max-w-6xl">
+          <DialogHeader>
+            <DialogTitle className="tracking-tight">
+              {latestImport.data?.filename}
+              <span className="ml-2 font-mono text-[11px] text-mut">
+                {latestImport.data?.row_count} rows
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-auto rounded-md ring-1 ring-line bg-panel2">
+            <table className="w-full border-collapse font-mono text-[11px]">
+              <thead className="text-mut">
+                <tr className="border-b border-line">
+                  {csvHeader.map((cell, i) => (
+                    <th
+                      key={i}
+                      className="text-left font-medium px-3 py-2 bg-panel2 sticky top-0 whitespace-pre-line min-w-[140px]"
+                    >
+                      {cell}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {csvBody.map((row, r) => (
+                  <tr key={r} className="border-b border-line last:border-0 hover:bg-panel">
+                    {row.map((cell, c) => (
+                      <td key={c} className="px-3 py-1.5 text-fg align-top whitespace-pre-line">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
