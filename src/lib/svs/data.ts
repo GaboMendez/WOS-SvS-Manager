@@ -182,6 +182,10 @@ export function useSetSlot() {
       if (source) {
         if (source.slot === slot) return;
         if (occupant) {
+          // (day, slot) is unique, so park the occupant on a scratch slot first to avoid
+          // colliding with the source's target slot while both updates are in flight.
+          const tempSlot = `__swap_${occupant.id}`;
+          await supabase.from("appointments").update({ slot: tempSlot }).eq("id", occupant.id);
           await supabase.from("appointments").update({ slot }).eq("id", source.id);
           await supabase.from("appointments").update({ slot: source.slot }).eq("id", occupant.id);
         } else {
