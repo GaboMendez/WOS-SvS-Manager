@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { Github } from "lucide-react";
 import type { ReactNode } from "react";
 import { DAYS, type DayKey } from "@/lib/svs/types";
 
@@ -55,7 +56,7 @@ export function AppShell({
         (aside ? "md:grid-cols-[220px_1fr_300px]" : "md:grid-cols-[220px_1fr]")
       }
     >
-      <aside className="border-r border-line bg-panel md:min-h-screen">
+      <aside className="border-r border-line bg-panel md:min-h-screen flex flex-col">
         <Link to="/" className="px-4 py-4 border-b border-line flex items-center gap-2.5">
           <div className="size-10 grid place-items-center bg-primary text-primary-foreground font-bold text-sm">
             3496
@@ -103,6 +104,15 @@ export function AppShell({
           </PageLink>
 
         </nav>
+        <a
+          href="https://github.com/GaboMendez/WOS-SvS-Manager"
+          target="_blank"
+          rel="noreferrer"
+          className="mt-auto flex items-center gap-2 px-4 py-3 border-t border-line text-xs font-medium text-mut hover:text-fg transition-colors"
+        >
+          <Github className="size-3.5" />
+          GitHub repository
+        </a>
       </aside>
 
       <main className="min-w-0 bg-ink">{children}</main>
