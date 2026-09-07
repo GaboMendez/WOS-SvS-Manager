@@ -14,21 +14,17 @@ const DAY_HEADERS: Record<DayKey, string> = {
   thursday: "Day 4 - Training",
 };
 
-function compactSlot(slot: string): string {
-  return slot.replace(":", "");
-}
-
 /** 30 minutes after `slot`, wrapping past 23:30 back to 00:00. */
 function slotEnd(slot: string): string {
-  const [h, m] = slot.split(":").map(Number);
+  const [h = 0, m = 0] = slot.split(":").map(Number);
   const total = (h * 60 + m + 30) % (24 * 60);
   const eh = Math.floor(total / 60);
   const em = total % 60;
-  return `${String(eh).padStart(2, "0")}${String(em).padStart(2, "0")}`;
+  return `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
 }
 
 function entryFor(a: Appointment, name: string): string {
-  return `${compactSlot(a.slot)} - ${slotEnd(a.slot)} > ${name}\n[${a.player_id}]`;
+  return `${a.slot} - ${slotEnd(a.slot)} | ${name} [${a.player_id}]`;
 }
 
 function chunkHeader(
@@ -37,12 +33,12 @@ function chunkHeader(
   index: number | string,
   total: number | string,
 ): string {
-  return `${DAY_HEADERS[day]}\n${alliance} [ ${index}/${total} ]`;
+  return `${DAY_HEADERS[day]}\n${alliance} [${index}/${total}]`;
 }
 
 /**
  * Greedily packs entries into chunks under `charLimit`. Uses a 2-digit placeholder for the
- * "[ i/n ]" header while packing so the real (shorter) header never pushes a finished chunk
+ * "[i/n]" header while packing so the real (shorter) header never pushes a finished chunk
  * over the limit.
  */
 function packAlliance(
