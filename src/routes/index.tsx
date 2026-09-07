@@ -15,7 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import { AppShell } from "@/components/AppShell";
-import { allianceColor, useRoster, useSchedule } from "@/lib/svs/data";
+import { useAllianceLookup, useRoster, useSchedule } from "@/lib/svs/data";
 import { formatScore, requestsDay } from "@/lib/svs/scoring";
 import { DAYS, SLOTS, type DayKey } from "@/lib/svs/types";
 
@@ -52,13 +52,23 @@ const TOOLTIP_ITEM_STYLE = { color: "var(--color-fg)" };
 const TOOLTIP_LABEL_STYLE = { color: "var(--color-fg)", fontWeight: 600 };
 const LEGEND_TEXT_STYLE = { color: "var(--color-fg)" };
 const AXIS_TICK = { fill: "var(--color-mut)", fontSize: 11 };
+// Plain hex, not var(--color-all-N) — those live in a Tailwind "@theme inline" block that
+// doesn't reliably resolve from inline styles/SVG fills (see useAllianceLookup in data.ts).
 const DAY_SCORE_COLORS: Record<DayKey, string> = {
-  monday: "var(--color-all-1)",
-  tuesday: "var(--color-all-2)",
-  thursday: "var(--color-all-4)",
+  monday: "#60a5fa",
+  tuesday: "#fbbf24",
+  thursday: "#a78bfa",
 };
 
-function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string | undefined;
+}) {
   return (
     <div className="flex-1 min-w-[140px] rounded-md ring-1 ring-line bg-panel px-4 py-3">
       <p className="font-mono text-[10px] uppercase tracking-widest text-mut">{label}</p>
@@ -95,6 +105,7 @@ function ChartCard({
 function Overview() {
   const roster = useRoster();
   const schedule = useSchedule();
+  const allianceLookup = useAllianceLookup();
 
   const players = roster.data?.players ?? [];
   const submissions = roster.data?.submissions ?? [];
@@ -242,7 +253,7 @@ function Overview() {
                   stroke="var(--color-panel)"
                 >
                   {playersByAlliance.map((entry) => (
-                    <Cell key={entry.alliance} fill={allianceColor(entry.alliance)} />
+                    <Cell key={entry.alliance} fill={allianceLookup(entry.alliance).color} />
                   ))}
                 </Pie>
                 <Tooltip
@@ -311,7 +322,7 @@ function Overview() {
                     stackId="s"
                     fill={DAY_SCORE_COLORS[d.key]}
                     name={d.label}
-                    radius={i === DAYS.length - 1 ? [0, 4, 4, 0] : undefined}
+                    radius={i === DAYS.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]}
                   />
                 ))}
               </BarChart>

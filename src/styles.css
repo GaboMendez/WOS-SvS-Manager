@@ -52,6 +52,8 @@
   --color-all-8: var(--all-8);
   --color-all-9: var(--all-9);
   --color-all-10: var(--all-10);
+  --color-all-11: var(--all-11);
+  --color-all-12: var(--all-12);
 }
 
 :root {
@@ -68,16 +70,18 @@
   --destructive: oklch(0.692 0.198 23.8);
   --ok: oklch(0.785 0.173 156.7);
   --warn: oklch(0.879 0.162 90.9);
-  --all-1: oklch(0.692 0.198 23.8);
-  --all-2: oklch(0.772 0.13 221.7);
-  --all-3: oklch(0.879 0.162 90.9);
-  --all-4: oklch(0.709 0.159 293.5);
-  --all-5: oklch(0.705 0.187 47.6);
-  --all-6: oklch(0.8 0.182 151.7);
-  --all-7: oklch(0.72 0.19 338);
-  --all-8: oklch(0.76 0.14 187);
-  --all-9: oklch(0.72 0.16 257);
-  --all-10: oklch(0.8 0.17 121);
+  --all-1: oklch(0.75 0.18 0);
+  --all-2: oklch(0.75 0.18 30);
+  --all-3: oklch(0.75 0.18 60);
+  --all-4: oklch(0.75 0.18 90);
+  --all-5: oklch(0.75 0.18 120);
+  --all-6: oklch(0.75 0.18 150);
+  --all-7: oklch(0.75 0.18 180);
+  --all-8: oklch(0.75 0.18 210);
+  --all-9: oklch(0.75 0.18 240);
+  --all-10: oklch(0.75 0.18 270);
+  --all-11: oklch(0.75 0.18 300);
+  --all-12: oklch(0.75 0.18 330);
 }
 
 @keyframes slotfill {

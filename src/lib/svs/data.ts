@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { scheduleDay } from "./schedule";
@@ -12,54 +13,52 @@ import {
   type Weights,
 } from "./types";
 
-const ALLIANCE_TOKENS = [
-  "all-1",
-  "all-2",
-  "all-3",
-  "all-4",
-  "all-5",
-  "all-6",
-  "all-7",
-  "all-8",
-  "all-9",
-  "all-10",
-] as const;
-// Mirrors the --all-1..10 custom properties in styles.css. Charting libs (recharts) sometimes
-// parse fill colors numerically for hover/legend states, which fails silently on var(...)
-// strings, so callers doing that should use allianceColor() instead of the CSS variable.
+// 8 hand-picked colors from clearly different named hue families (red/blue/yellow/purple/
+// green/pink/cyan/orange), not a computed hue rotation. Evenly-spaced or stride-reordered hue
+// wheels (tried earlier) still leave some pairs of slots only ~60° apart, which reads as "two
+// shades of green" rather than genuinely different colors — picking one representative per
+// well-known color family and interleaving warm/cool keeps every pair visually distinct instead
+// of just the immediate neighbors. Plain hex, not var(--color-all-N): those live inside a
+// Tailwind v4 "@theme inline" block, which doesn't reliably emit them as real runtime custom
+// properties usable from arbitrary inline style attributes.
 const ALLIANCE_COLORS = [
-  "oklch(0.692 0.198 23.8)",
-  "oklch(0.772 0.13 221.7)",
-  "oklch(0.879 0.162 90.9)",
-  "oklch(0.709 0.159 293.5)",
-  "oklch(0.705 0.187 47.6)",
-  "oklch(0.8 0.182 151.7)",
-  "oklch(0.72 0.19 338)",
-  "oklch(0.76 0.14 187)",
-  "oklch(0.72 0.16 257)",
-  "oklch(0.8 0.17 121)",
+  "#ef4444",
+  "#3b82f6",
+  "#eab308",
+  "#a855f7",
+  "#22c55e",
+  "#ec4899",
+  "#06b6d4",
+  "#f97316",
 ] as const;
 
-// Assigned in first-seen order (not hashed) so distinct tags never collide on the same color
-// as long as there are no more alliances than palette slots; stable for the life of the tab.
-const allianceSlots = new Map<string, number>();
+/**
+ * Stable alliance -> color lookup. The order is derived from every alliance tag currently in
+ * use — roster players AND schedule appointments/waitlist — not just the roster, because
+ * appointments/waitlist snapshot an alliance value at scheduling time that can lag behind the
+ * roster (e.g. after a re-import). Looking up a tag missing from the order previously fell back
+ * to a single shared color, making most alliances look uncolored; covering every source instead
+ * of just the roster means each cannot fail to be found.
+ */
+export function useAllianceLookup(): (tag: string) => { color: string } {
+  const roster = useRoster();
+  const schedule = useSchedule();
+  const order = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of roster.data?.players ?? []) set.add(p.alliance || "—");
+    for (const a of schedule.data?.appointments ?? []) set.add(a.alliance || "—");
+    for (const w of schedule.data?.waitlist ?? []) set.add(w.alliance || "—");
+    return [...set].sort();
+  }, [roster.data, schedule.data]);
 
-function allianceIndex(tag: string): number {
-  const key = tag || "—";
-  let idx = allianceSlots.get(key);
-  if (idx === undefined) {
-    idx = allianceSlots.size % ALLIANCE_TOKENS.length;
-    allianceSlots.set(key, idx);
-  }
-  return idx;
-}
-
-export function allianceToken(tag: string): string {
-  return ALLIANCE_TOKENS[allianceIndex(tag)] ?? "all-1";
-}
-
-export function allianceColor(tag: string): string {
-  return ALLIANCE_COLORS[allianceIndex(tag)] ?? ALLIANCE_COLORS[0];
+  return useMemo(() => {
+    return (tag: string) => {
+      const key = tag || "—";
+      const pos = order.indexOf(key);
+      const idx = pos === -1 ? 0 : pos % ALLIANCE_COLORS.length;
+      return { color: ALLIANCE_COLORS[idx] ?? ALLIANCE_COLORS[0] };
+    };
+  }, [order]);
 }
 
 export function useRoster() {

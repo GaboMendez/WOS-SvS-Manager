@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { allianceToken, useRoster, useSchedule } from "@/lib/svs/data";
+import { useAllianceLookup, useRoster, useSchedule } from "@/lib/svs/data";
 import { buildAllianceMessages } from "@/lib/svs/messages";
 import type { DayKey } from "@/lib/svs/types";
 
@@ -35,6 +35,7 @@ const CHAR_LIMIT = 250;
 function MessagesPage() {
   const roster = useRoster();
   const schedule = useSchedule();
+  const allianceLookup = useAllianceLookup();
   const [day, setDay] = useState<DayKey>("monday");
   const [allianceFilter, setAllianceFilter] = useState("all");
 
@@ -122,7 +123,7 @@ function MessagesPage() {
               <div className="flex items-center gap-2.5 mb-2">
                 <span
                   className="size-2 rounded-[2px] inline-block"
-                  style={{ backgroundColor: `var(--color-${allianceToken(m.alliance)})` }}
+                  style={{ backgroundColor: allianceLookup(m.alliance).color }}
                 />
                 <span className="text-sm font-medium">
                   {m.alliance} {m.index}/{m.total}

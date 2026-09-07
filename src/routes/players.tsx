@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PlayerDetail } from "@/components/PlayerDetail";
-import { allianceToken, useClearAll, useRoster, useWeights } from "@/lib/svs/data";
+import { useAllianceLookup, useClearAll, useRoster, useWeights } from "@/lib/svs/data";
 import { formatScore, preferredHours, scoreFor } from "@/lib/svs/scoring";
 
 
@@ -28,6 +28,7 @@ export const Route = createFileRoute("/players")({
 function PlayersPage() {
   const roster = useRoster();
   const weights = useWeights();
+  const allianceLookup = useAllianceLookup();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const clearAll = useClearAll();
@@ -108,7 +109,7 @@ function PlayersPage() {
                       <span className="inline-flex items-center gap-1.5">
                         <span
                           className="size-2 rounded-[2px]"
-                          style={{ backgroundColor: `var(--color-${allianceToken(p.alliance)})` }}
+                          style={{ backgroundColor: allianceLookup(p.alliance).color }}
                         />
                         {p.alliance || "—"}
                       </span>

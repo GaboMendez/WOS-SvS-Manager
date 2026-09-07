@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PlayerDetail } from "@/components/PlayerDetail";
 import {
-  allianceToken,
+  useAllianceLookup,
   useRecompute,
   useRoster,
   useSchedule,
@@ -40,10 +40,11 @@ export const Route = createFileRoute("/board")({
 });
 
 function Dot({ tag }: { tag: string }) {
+  const allianceLookup = useAllianceLookup();
   return (
     <span
       className="size-2 rounded-[2px] inline-block"
-      style={{ backgroundColor: `var(--color-${allianceToken(tag)})` }}
+      style={{ backgroundColor: allianceLookup(tag).color }}
     />
   );
 }
