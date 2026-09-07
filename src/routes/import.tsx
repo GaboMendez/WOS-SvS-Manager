@@ -159,8 +159,11 @@ function ImportPage() {
                 Scoring page.
               </li>
               <li>
-                Highest-score players get their preferred UTC hour first; anyone who doesn't fit
-                lands on the waitlist.
+                Players with higher scores get seated first. If their preferred time is taken by
+                someone with a lower score, that person is moved to another time they also said
+                works for them — so nobody loses their spot, they just might get a different one
+                of their own preferred hours. Only if there's truly no open time left among a
+                player's choices do they end up on the waitlist.
               </li>
               <li>
                 Re-importing replaces all data; you can still adjust slots manually afterward.
