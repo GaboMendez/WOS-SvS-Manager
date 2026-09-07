@@ -188,6 +188,29 @@ export function useClearAll() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["roster"] });
       qc.invalidateQueries({ queryKey: ["schedule"] });
+      qc.invalidateQueries({ queryKey: ["latestImport"] });
+    },
+  });
+}
+
+/** Most recent CSV import, so "view collected responses" can offer it back for download. */
+export function useLatestImport() {
+  return useQuery({
+    queryKey: ["latestImport"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("imports")
+        .select("filename,raw_csv,row_count,created_at")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as {
+        filename: string;
+        raw_csv: string;
+        row_count: number;
+        created_at: string;
+      } | null;
     },
   });
 }
@@ -300,6 +323,7 @@ export function useImportCsv() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["roster"] });
       qc.invalidateQueries({ queryKey: ["schedule"] });
+      qc.invalidateQueries({ queryKey: ["latestImport"] });
     },
   });
 }

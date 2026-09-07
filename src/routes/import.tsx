@@ -3,8 +3,8 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { parseCsv, type ParsedImport } from "@/lib/svs/csv";
-import { useImportCsv, useRecompute } from "@/lib/svs/data";
+import { downloadCsv, parseCsv, type ParsedImport } from "@/lib/svs/csv";
+import { useImportCsv, useLatestImport, useRecompute } from "@/lib/svs/data";
 
 export const Route = createFileRoute("/import")({
   head: () => ({
@@ -30,6 +30,7 @@ function ImportPage() {
   const [filename, setFilename] = useState("");
   const importCsv = useImportCsv();
   const recompute = useRecompute();
+  const latestImport = useLatestImport();
   const navigate = useNavigate();
 
   async function onFile(file: File) {
@@ -73,6 +74,27 @@ function ImportPage() {
       </div>
 
       <div className="px-4 py-4 max-w-3xl space-y-4">
+        {latestImport.data ? (
+          <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3 flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">📊 View Collected Responses</p>
+              <p className="font-mono text-[11px] text-mut mt-0.5">
+                {latestImport.data.filename} <br></br> {latestImport.data.row_count} rows · imported{" "}
+                {new Date(latestImport.data.created_at).toLocaleString()}
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                downloadCsv(latestImport.data!.filename || "collected-responses.csv", latestImport.data!.raw_csv)
+              }
+              className="text-xs font-medium px-3 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg whitespace-nowrap inline-flex items-center gap-1.5"
+            >
+              <Download className="size-3.5" />
+              Download CSV
+            </button>
+          </div>
+        ) : null}
+
         <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3 flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">📂 First time? Download sample SvS data to try it out</p>
