@@ -57,12 +57,12 @@ export function AppShell({
     >
       <aside className="border-r border-line bg-panel md:min-h-screen">
         <div className="px-4 py-4 border-b border-line flex items-center gap-2.5">
-          <div className="size-7 grid place-items-center bg-primary text-primary-foreground font-bold text-sm">
-            S
+          <div className="size-10 grid place-items-center bg-primary text-primary-foreground font-bold text-sm">
+            3496
           </div>
           <div className="leading-none">
-            <p className="font-semibold text-[15px] tracking-tight">SvS Prep</p>
-            <p className="text-[10px] font-mono text-mut mt-0.5">DUTY ROSTER</p>
+            <p className="font-semibold text-[16px] tracking-tight">SvS Preparation</p>
+            <p className="text-[12px] font-mono text-mut mt-1.5">DUTY ROSTER</p>
           </div>
         </div>
         <nav className="py-3 flex flex-col gap-0.5">
