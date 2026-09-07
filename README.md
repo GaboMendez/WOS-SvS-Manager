@@ -4,13 +4,19 @@ Right now, we can configure the SvS points from the form inputs, including:
 - Points per FC
 - Points per RFC
 - Points per FC Shard
+- Construction speedup per minute
 - Research speedup per minute
-- Days-to-minutes conversion (by default, 1 day = 1,440 minutes). This conversion is important because the players' form responses are based on days, while the points for the events are calculated using speedup minutes.
+- Days-to-minutes conversion (by default, 1 day = 1,440 minutes). This conversion is important because the players' form responses are based on days, while the points for construction and research speedups are calculated using speedup minutes.
 
 The algorithm assigns spots based on the potential points that each player can earn according to their form responses. These points are then used as a priority queue to determine the allocation.
+### Overview Dashboard
+
+The home page is a dashboard summarizing all imported data: total players, slots filled vs. open, waitlist size, and alliance participation, plus charts for slots filled per day, waitlist size per day, players per alliance, requested days, and priority score per alliance.
 ### CSV Import
 
-We can import the data from a .csv file. We only need to export the “Formularantworten 1” sheet from Excel as a .csv file and upload it to the web app.
+We can import the data from a .csv file. We only need to export the “Formularantworten 1” sheet as a .csv from the Excel Kopie von SVS Prep Signup Template (Antworten) file and upload it to the web app.
+
+A sample CSV is available to download directly from the Import page for anyone who wants to try the app without their own sign-up data.
 
 Once the file is processed, the app will clear the previous data and populate the application with the new data from the imported file.
 ### Players
@@ -22,7 +28,7 @@ There is a list of all players who filled out the form. We can search for player
 - Alliance
 
 Clicking on a player opens a detail modal containing the information submitted by that player, as well as their potential score based on their responses.
-### Monday, Tuesday, and Thursday
+### Monday, Tuesday, and Thursday (Duty Board)
 
 There is a separate page for each day. Each page contains a table showing the assigned spots for that day.
 
@@ -40,6 +46,9 @@ However, the assigned data can also be edited manually. We will be able to:
 - Swap spots between players in the table.
 - Move/swap players between the table and the waitlist.
 - Manually adjust the assigned spots when needed.
+### Output Messages
+
+A dedicated page generates copy-paste-ready messages for each alliance's R4/R5 to send to their scheduled chiefs, grouped by day. Messages are automatically split into multiple parts to stay under a 250 character limit, and can be filtered by day or alliance.
 
 ## Built with
 

@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -72,6 +73,47 @@ function ImportPage() {
       </div>
 
       <div className="px-4 py-4 max-w-3xl space-y-4">
+        <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3 flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">📂 First time? Download sample SvS data to try it out</p>
+            <p className="font-mono text-[11px] text-mut mt-0.5">
+              Download the sample CSV, then drag it into the upload zone
+            </p>
+          </div>
+          <a
+            href="/sample-signup.csv"
+            download
+            className="text-xs font-medium px-3 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg whitespace-nowrap inline-flex items-center gap-1.5"
+          >
+            <Download className="size-3.5" />
+            Download sample CSV
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
+            <p className="text-sm font-semibold tracking-tight">How to use</p>
+            <ol className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-decimal list-inside">
+              <li>
+                Export the "Formularantworten 1" sheet as a .csv from the Excel "Kopie von SVS
+                Prep Signup Template (Antworten)" file <br></br>(File → Download → .csv).
+              </li>
+              <li>Choose that file in the upload zone below.</li>
+              <li>Review the parse summary and any validation warnings.</li>
+              <li>Click "Save import and build schedule" to store it and auto-assign slots.</li>
+            </ol>
+          </div>
+          <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
+            <p className="text-sm font-semibold tracking-tight">How it works</p>
+            <ul className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-disc list-inside">
+              <li>Only the latest submission per Player ID is kept — older duplicates are dropped.</li>
+              <li>Each day's priority score comes from the submitted resources, weighted per the Scoring page.</li>
+              <li>Highest-score players get their preferred UTC hour first; anyone who doesn't fit lands on the waitlist.</li>
+              <li>Re-importing replaces all data; you can still adjust slots manually afterward.</li>
+            </ul>
+          </div>
+        </div>
+
         <label className="block rounded-md ring-1 ring-line bg-panel px-4 py-8 text-center cursor-pointer hover:ring-primary/50 transition-colors">
           <input
             type="file"

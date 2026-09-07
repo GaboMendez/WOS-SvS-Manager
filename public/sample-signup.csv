@@ -1,0 +1,17 @@
+Zeitstempel,Player  Name,Player ID,What Alliance do you belong to?,Do you want a construction day appointment (Monday),How many normal Fire Crystals will you use on Monday?,How many REFINED Fire Crystals will you use on Monday?,How many  Speedups are you planning to use on construction day? (In days),What times you are available on Monday Construction day? (UTC time),Do you want a research appointment? (Tuesday),How many speedups are you planning to use on research day? (in days),How many Fire Crystal Shards do  you have?,"What times you are available on Tuesday Research day? (UTC time)
+
+Choose MINIMUM 4 times, but select ALL you can make. ",Do you want a troop training appointment?  (Thursday),How many speedups are you planning to use on Thursday troop day? (In days),"What times you are available on Thursday? (UTC time)
+
+Choose MINIMUM 4 times, but select ALL you can make. ",Anything else you want to say?,Spalte 1
+01.09.2026 08:12:03,SampleHero,100000001,ABS,Yes,1000,50,20,"00:00, 01:00, 02:00, 12:00, 13:00",Yes,25,1200,"00:00, 01:00, 02:00, 12:00, 13:00",Yes,20,"00:00, 01:00, 02:00, 12:00, 13:00",Good luck team!,
+01.09.2026 09:30:11,NightOwl,100000002,GOS,Yes,2000,150,45,"03:00, 04:00, 05:00, 06:00",Yes,60,3000,"03:00, 04:00, 05:00, 06:00",No,,,,
+01.09.2026 10:05:44,DragonFury,100000003,GOW,No,,,,,Yes,40,1800,"08:00, 09:00, 10:00, 11:00, 20:00",Yes,35,"08:00, 09:00, 10:00, 11:00, 20:00",,
+01.09.2026 11:22:37,MoonWalker,100000004,RZN,Yes,500,20,10,"14:00, 15:00, 16:00, 17:00",Yes,15,600,"14:00, 15:00, 16:00, 17:00",Yes,10,"14:00, 15:00, 16:00, 17:00",Happy to help,
+01.09.2026 12:40:52,IronClad,100000005,WSE,Yes,3200,400,80,"01:00, 02:00, 03:00, 04:00, 05:00",Yes,90,4200,"01:00, 02:00, 03:00, 04:00, 05:00",Yes,70,"01:00, 02:00, 03:00, 04:00, 05:00",,
+01.09.2026 13:15:09,ShadowFox,100000006,kAt,Yes,1200,60,25,"18:00, 19:00, 20:00, 21:00",No,,,,Yes,15,"18:00, 19:00, 20:00, 21:00",Thanks devs,
+01.09.2026 14:02:28,StarGazer,100000007,ABS,Yes,900,45,15,"06:00, 07:00, 08:00, 09:00",Yes,30,1000,"06:00, 07:00, 08:00, 09:00",Yes,25,"06:00, 07:00, 08:00, 09:00",,
+01.09.2026 15:47:33,BlazeRider,100000008,GOS,Yes,5000,600,120,"22:00, 23:00, 00:00, 01:00",Yes,100,6000,"22:00, 23:00, 00:00, 01:00",Yes,90,"22:00, 23:00, 00:00, 01:00","Let's win this",
+01.09.2026 16:33:20,FrostBite,100000009,GOW,Yes,700,30,10,"09:00, 10:00, 11:00",Yes,20,900,"09:00, 10:00, 11:00",No,,,,
+01.09.2026 17:58:41,SilentStorm,100000010,RZN,No,,,,,No,,,,Yes,40,"19:00, 20:00, 21:00, 22:00","Sorry, busy this week",
+01.09.2026 18:20:05,QuickSilver,100000011,WSE,Yes,1500,90,30,"02:00, 03:00, 04:00",Yes,45,2100,"02:00, 03:00, 04:00",Yes,30,"02:00, 03:00, 04:00",,
+01.09.2026 19:44:58,GoldenEagle,100000012,kAt,Yes,2500,180,55,"07:00, 08:00, 09:00, 10:00",Yes,65,3300,"07:00, 08:00, 09:00, 10:00",Yes,50,"07:00, 08:00, 09:00, 10:00",See you there!,
