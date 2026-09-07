@@ -86,7 +86,7 @@ function ScoringPage() {
         {FIELDS.map((f) => (
           <div key={f.key} className="rounded-md ring-1 ring-line bg-panel px-3 py-2.5">
             <div className="flex items-center justify-between gap-4">
-              <div>
+              <div className="flex flex-col justify-center">
                 <label className="text-sm font-medium">{f.label}</label>
                 <p className="font-mono text-[10px] text-mut mt-0.5">{f.hint}</p>
               </div>
@@ -135,8 +135,9 @@ function ScoringPage() {
           Monday = fire crystals + refined fire crystals + construction speedups. <br></br>
           Tuesday = fire crystal shards + research speedups. <br></br> Thursday = training speedups.{" "}
           <br></br>
-          <br></br>
-          Ties go to the earliest submission.
+          <p className="font-mono text-[11px] text-amber-400/90 pt-1">
+            Ties go to the earliest submission.
+          </p>
         </p>
       </div>
     </AppShell>
