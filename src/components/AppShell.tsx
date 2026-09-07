@@ -56,7 +56,7 @@ export function AppShell({
         (aside ? "md:grid-cols-[220px_1fr_300px]" : "md:grid-cols-[220px_1fr]")
       }
     >
-      <aside className="border-r border-line bg-panel md:min-h-screen flex flex-col">
+      <aside className="border-r border-line bg-panel flex flex-col md:sticky md:top-0 md:h-screen md:overflow-y-auto">
         <Link to="/" className="px-4 py-4 border-b border-line flex items-center gap-2.5">
           <div className="size-10 grid place-items-center bg-primary text-primary-foreground font-bold text-sm">
             3496
@@ -117,7 +117,11 @@ export function AppShell({
 
       <main className="min-w-0 bg-ink">{children}</main>
 
-      {aside ? <aside className="border-l border-line bg-panel md:min-h-screen">{aside}</aside> : null}
+      {aside ? (
+        <aside className="border-l border-line bg-panel md:sticky md:top-0 md:h-screen md:overflow-y-auto">
+          {aside}
+        </aside>
+      ) : null}
     </div>
   );
 }

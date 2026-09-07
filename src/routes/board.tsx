@@ -142,7 +142,7 @@ function Dashboard() {
   }, [appts, subs, day, weights.data]);
 
   const resourceLabel =
-    day === "monday" ? "fire crystals" : day === "tuesday" ? "shards + minutes" : "speedup days";
+    day === "monday" ? "fire crystals" : day === "tuesday" ? " fc shards + minutes" : "speedup days";
 
   function exportDay() {
     const rows: (string | number)[][] = [
