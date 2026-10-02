@@ -13,6 +13,15 @@ import {
   type Weights,
 } from "./types";
 
+// Initialize database on load
+let dbInitialized = false;
+async function ensureDb() {
+  if (!dbInitialized) {
+    await dbOperations.init();
+    dbInitialized = true;
+  }
+}
+
 // 8 hand-picked colors from clearly different named hue families (red/blue/yellow/purple/
 // green/pink/cyan/orange), not a computed hue rotation. Evenly-spaced or stride-reordered hue
 // wheels (tried earlier) still leave some pairs of slots only ~60° apart, which reads as "two
@@ -65,6 +74,7 @@ export function useRoster() {
   return useQuery({
     queryKey: ["roster"],
     queryFn: async () => {
+      await ensureDb();
       const players = dbOperations.getPlayers();
       const submissions = dbOperations.getSubmissions();
 
@@ -84,6 +94,7 @@ export function useSchedule() {
   return useQuery({
     queryKey: ["schedule"],
     queryFn: async () => {
+      await ensureDb();
       const appts = dbOperations.getAppointments();
       const wl = dbOperations.getWaitlist();
 
@@ -99,6 +110,7 @@ export function useWeights() {
   return useQuery({
     queryKey: ["weights"],
     queryFn: async () => {
+      await ensureDb();
       const settings = dbOperations.getSettings();
       const weights = settings?.weights ?? {};
       return { ...DEFAULT_WEIGHTS, ...(weights as Partial<Weights>) } as Weights;
@@ -203,6 +215,7 @@ export function useLatestImport() {
   return useQuery({
     queryKey: ["latestImport"],
     queryFn: async () => {
+      await ensureDb();
       const data = dbOperations.getLatestImport();
       return data as {
         filename: string;
