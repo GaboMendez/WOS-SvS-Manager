@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { dbOperations } from "@/integrations/sqlite/client";
 import { scheduleDay } from "./schedule";
 import {
   DAYS,
@@ -65,14 +65,12 @@ export function useRoster() {
   return useQuery({
     queryKey: ["roster"],
     queryFn: async () => {
-      const [{ data: players, error: pe }, { data: submissions, error: se }] = await Promise.all([
-        supabase.from("players").select("player_id,name,alliance").order("name"),
-        supabase.from("submissions").select("*"),
-      ]);
-      if (pe) throw pe;
-      if (se) throw se;
+      const players = dbOperations.getPlayers();
+      const submissions = dbOperations.getSubmissions();
+
       const byId: Record<string, Player> = {};
       for (const p of (players ?? []) as Player[]) byId[p.player_id] = p;
+
       return {
         players: (players ?? []) as Player[],
         playersById: byId,
@@ -86,12 +84,9 @@ export function useSchedule() {
   return useQuery({
     queryKey: ["schedule"],
     queryFn: async () => {
-      const [{ data: appts, error: ae }, { data: wl, error: we }] = await Promise.all([
-        supabase.from("appointments").select("*"),
-        supabase.from("waitlist").select("*"),
-      ]);
-      if (ae) throw ae;
-      if (we) throw we;
+      const appts = dbOperations.getAppointments();
+      const wl = dbOperations.getWaitlist();
+
       return {
         appointments: (appts ?? []) as unknown as Appointment[],
         waitlist: (wl ?? []) as unknown as WaitlistEntry[],
@@ -104,13 +99,9 @@ export function useWeights() {
   return useQuery({
     queryKey: ["weights"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("settings")
-        .select("weights")
-        .eq("id", 1)
-        .maybeSingle();
-      if (error) throw error;
-      return { ...DEFAULT_WEIGHTS, ...((data?.weights ?? {}) as Partial<Weights>) } as Weights;
+      const settings = dbOperations.getSettings();
+      const weights = settings?.weights ?? {};
+      return { ...DEFAULT_WEIGHTS, ...(weights as Partial<Weights>) } as Weights;
     },
   });
 }
@@ -119,10 +110,11 @@ export function useSaveWeights() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (weights: Weights) => {
-      const { error } = await supabase
-        .from("settings")
-        .upsert({ id: 1, weights, updated_at: new Date().toISOString() });
-      if (error) throw error;
+      dbOperations.upsertSettings({
+        id: 1,
+        weights,
+        updated_at: new Date().toISOString(),
+      });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["weights"] }),
   });
@@ -132,11 +124,10 @@ export function useRecompute() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const [{ data: players }, { data: subs }, { data: settings }] = await Promise.all([
-        supabase.from("players").select("player_id,name,alliance"),
-        supabase.from("submissions").select("*"),
-        supabase.from("settings").select("weights").eq("id", 1).maybeSingle(),
-      ]);
+      const players = dbOperations.getPlayers();
+      const subs = dbOperations.getSubmissions();
+      const settings = dbOperations.getSettings();
+
       const weights = {
         ...DEFAULT_WEIGHTS,
         ...((settings?.weights ?? {}) as Partial<Weights>),
@@ -157,16 +148,30 @@ export function useRecompute() {
         waitlist.push(...res.waitlist);
       }
 
-      await supabase.from("appointments").delete().neq("day", "__none__");
-      await supabase.from("waitlist").delete().neq("day", "__none__");
-      if (appointments.length) {
-        const { error } = await supabase.from("appointments").insert(appointments);
-        if (error) throw error;
+      dbOperations.deleteAllAppointments();
+      dbOperations.deleteAllWaitlist();
+
+      for (const appt of appointments) {
+        dbOperations.insertAppointment({
+          id: appt.id,
+          day: appt.day,
+          slot: appt.slot,
+          player_id: appt.player_id,
+          alliance: appt.alliance,
+          score: appt.score,
+        });
       }
-      if (waitlist.length) {
-        const { error } = await supabase.from("waitlist").insert(waitlist);
-        if (error) throw error;
+      for (const w of waitlist) {
+        dbOperations.insertWaitlist({
+          id: w.id,
+          day: w.day,
+          player_id: w.player_id,
+          alliance: w.alliance,
+          score: w.score,
+          reason: w.reason,
+        });
       }
+
       return { scheduled: appointments.length, waitlisted: waitlist.length };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["schedule"] }),
@@ -174,11 +179,11 @@ export function useRecompute() {
 }
 
 async function wipeAll() {
-  await supabase.from("appointments").delete().neq("day", "__none__");
-  await supabase.from("waitlist").delete().neq("day", "__none__");
-  await supabase.from("submissions").delete().neq("player_id", "__none__");
-  await supabase.from("players").delete().neq("player_id", "__none__");
-  await supabase.from("imports").delete().neq("filename", "__none__");
+  dbOperations.deleteAllAppointments();
+  dbOperations.deleteAllWaitlist();
+  dbOperations.deleteAllSubmissions();
+  dbOperations.deleteAllPlayers();
+  dbOperations.deleteAllImports();
 }
 
 export function useClearAll() {
@@ -198,13 +203,7 @@ export function useLatestImport() {
   return useQuery({
     queryKey: ["latestImport"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("imports")
-        .select("filename,raw_csv,row_count,created_at")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
+      const data = dbOperations.getLatestImport();
       return data as {
         filename: string;
         raw_csv: string;
@@ -221,18 +220,18 @@ export function useSetSlot() {
   return useMutation({
     mutationFn: async (args: { day: DayKey; slot: string; playerId: string | null }) => {
       const { day, slot, playerId } = args;
-      const [{ data: apptRows }, { data: wlRows }] = await Promise.all([
-        supabase.from("appointments").select("*").eq("day", day),
-        supabase.from("waitlist").select("*").eq("day", day),
-      ]);
+      const apptRows = dbOperations.getAppointmentsByDay(day);
+      const wlRows = dbOperations.getWaitlistByDay(day);
+
       const appts = (apptRows ?? []) as unknown as (Appointment & { id: string })[];
       const wl = (wlRows ?? []) as unknown as (WaitlistEntry & { id: string })[];
       const occupant = appts.find((a) => a.slot === slot);
 
       if (!playerId) {
         if (!occupant) return;
-        await supabase.from("appointments").delete().eq("id", occupant.id);
-        await supabase.from("waitlist").insert({
+        dbOperations.deleteAppointment(occupant.id);
+        dbOperations.insertWaitlist({
+          id: crypto.randomUUID(),
           day,
           player_id: occupant.player_id,
           alliance: occupant.alliance,
@@ -249,24 +248,26 @@ export function useSetSlot() {
           // (day, slot) is unique, so park the occupant on a scratch slot first to avoid
           // colliding with the source's target slot while both updates are in flight.
           const tempSlot = `__swap_${occupant.id}`;
-          await supabase.from("appointments").update({ slot: tempSlot }).eq("id", occupant.id);
-          await supabase.from("appointments").update({ slot }).eq("id", source.id);
-          await supabase.from("appointments").update({ slot: source.slot }).eq("id", occupant.id);
+          dbOperations.updateAppointment(occupant.id, { slot: tempSlot });
+          dbOperations.updateAppointment(source.id, { slot });
+          dbOperations.updateAppointment(occupant.id, { slot: source.slot });
         } else {
-          await supabase.from("appointments").update({ slot }).eq("id", source.id);
+          dbOperations.updateAppointment(source.id, { slot });
         }
         return;
       }
 
       const entry = wl.find((w) => w.player_id === playerId);
       if (!entry) return;
-      await supabase.from("waitlist").delete().eq("id", entry.id);
+      dbOperations.deleteWaitlist(entry.id);
       if (occupant) {
-        await supabase
-          .from("appointments")
-          .update({ player_id: entry.player_id, alliance: entry.alliance, score: entry.score })
-          .eq("id", occupant.id);
-        await supabase.from("waitlist").insert({
+        dbOperations.updateAppointment(occupant.id, {
+          player_id: entry.player_id,
+          alliance: entry.alliance,
+          score: entry.score
+        });
+        dbOperations.insertWaitlist({
+          id: crypto.randomUUID(),
           day,
           player_id: occupant.player_id,
           alliance: occupant.alliance,
@@ -274,7 +275,8 @@ export function useSetSlot() {
           reason: "replaced manually",
         });
       } else {
-        await supabase.from("appointments").insert({
+        dbOperations.insertAppointment({
+          id: crypto.randomUUID(),
           day,
           slot,
           player_id: entry.player_id,
@@ -298,27 +300,46 @@ export function useImportCsv() {
     }) => {
       await wipeAll();
 
-      const { data: imp, error: ie } = await supabase
-        .from("imports")
-        .insert({
-          filename: args.filename,
-          raw_csv: args.raw,
-          row_count: args.submissions.length,
-        })
-        .select("id")
-        .single();
-      if (ie) throw ie;
+      const importId = crypto.randomUUID();
+      dbOperations.insertImport({
+        id: importId,
+        filename: args.filename,
+        raw_csv: args.raw,
+        row_count: args.submissions.length,
+        created_at: new Date().toISOString(),
+      });
 
-      const { error: pe } = await supabase
-        .from("players")
-        .upsert(args.players.map((p) => ({ ...p, updated_at: new Date().toISOString() })));
-      if (pe) throw pe;
+      for (const p of args.players) {
+        dbOperations.upsertPlayer({
+          player_id: p.player_id,
+          name: p.name,
+          alliance: p.alliance,
+          updated_at: new Date().toISOString(),
+        });
+      }
 
-      const { error: se } = await supabase
-        .from("submissions")
-        .upsert(args.submissions.map((s) => ({ ...s, import_id: imp.id })));
-      if (se) throw se;
-      return imp.id as string;
+      for (const s of args.submissions) {
+        dbOperations.upsertSubmission({
+          player_id: s.player_id,
+          import_id: importId,
+          comment: s.comment,
+          requests_monday: s.requests_monday,
+          requests_tuesday: s.requests_tuesday,
+          requests_thursday: s.requests_thursday,
+          mon_hours: (s as unknown as { mon_hours: number[] }).mon_hours,
+          mon_normal_fc: s.mon_normal_fc,
+          mon_refined_fc: s.mon_refined_fc,
+          mon_speedup_days: s.mon_speedup_days,
+          tue_hours: (s as unknown as { tue_hours: number[] }).tue_hours,
+          tue_shards: s.tue_shards,
+          tue_speedup_days: s.tue_speedup_days,
+          thu_hours: (s as unknown as { thu_hours: number[] }).thu_hours,
+          thu_speedup_days: s.thu_speedup_days,
+          submitted_at: s.submitted_at,
+        });
+      }
+
+      return importId;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["roster"] });
