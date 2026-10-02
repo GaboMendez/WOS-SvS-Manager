@@ -1,9 +1,5 @@
 # Logs
 logs
-
-# SQLite database
-src/data/*.db
-src/data/*.db-*
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -28,11 +24,12 @@ dist-ssr
 .env
 .env.local
 
+# SQLite database
+data/*.db
+data/*.db-*
+
 # Real sign-up export with player data — not for version control
 SVS Prep Signup Template - Formularantworten 1.csv
-
-# Supabase CLI local cache
-supabase/.temp
 
 # Editor directories and files
 .vscode/*
