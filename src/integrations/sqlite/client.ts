@@ -1,37 +1,55 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.resolve(__dirname, '../../data/wos.db');
+let db: SqlJsDatabase | null = null;
+let dbInitPromise: Promise<SqlJsDatabase> | null = null;
 
-// Ensure data directory exists
-import fs from 'fs';
-const dataDir = path.dirname(dbPath);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+const DB_STORAGE_KEY = 'wos_db';
+
+async function initDb(): Promise<SqlJsDatabase> {
+  if (db) return db;
+
+  if (dbInitPromise) return dbInitPromise;
+
+  dbInitPromise = (async () => {
+    const SQL = await initSqlJs({
+      locateFile: (file) => `https://sql.js.org/dist/${file}`,
+    });
+
+    // Try to load existing database from localStorage
+    const savedDb = localStorage.getItem(DB_STORAGE_KEY);
+    if (savedDb) {
+      const data = Uint8Array.from(atob(savedDb), (c) => c.charCodeAt(0));
+      db = new SQL.Database(data);
+    } else {
+      db = new SQL.Database();
+      initializeSchema(db);
+      saveDb();
+    }
+
+    return db;
+  })();
+
+  return dbInitPromise;
 }
 
-let db: Database.Database | null = null;
-
-export function getDb(): Database.Database {
-  if (!db) {
-    db = new Database(dbPath);
-    db.pragma('journal_mode = WAL');
-    initializeSchema(db);
-  }
-  return db;
+function saveDb() {
+  if (!db) return;
+  const data = db.export();
+  const base64 = btoa(String.fromCharCode(...data));
+  localStorage.setItem(DB_STORAGE_KEY, base64);
 }
 
-function initializeSchema(database: Database.Database) {
-  database.exec(`
+function initializeSchema(database: SqlJsDatabase) {
+  database.run(`
     CREATE TABLE IF NOT EXISTS players (
       player_id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       alliance TEXT,
       updated_at TEXT NOT NULL
-    );
+    )
+  `);
 
+  database.run(`
     CREATE TABLE IF NOT EXISTS submissions (
       player_id TEXT PRIMARY KEY,
       import_id TEXT,
@@ -48,63 +66,61 @@ function initializeSchema(database: Database.Database) {
       tue_speedup_days INTEGER DEFAULT 0,
       thu_hours TEXT,
       thu_speedup_days INTEGER DEFAULT 0,
-      submitted_at TEXT NOT NULL,
-      FOREIGN KEY (player_id) REFERENCES players(player_id)
-    );
+      submitted_at TEXT NOT NULL
+    )
+  `);
 
+  database.run(`
     CREATE TABLE IF NOT EXISTS appointments (
       id TEXT PRIMARY KEY,
       day TEXT NOT NULL,
       slot TEXT NOT NULL,
       player_id TEXT NOT NULL,
       alliance TEXT,
-      score INTEGER DEFAULT 0,
-      FOREIGN KEY (player_id) REFERENCES players(player_id)
-    );
+      score INTEGER DEFAULT 0
+    )
+  `);
 
+  database.run(`
     CREATE TABLE IF NOT EXISTS waitlist (
       id TEXT PRIMARY KEY,
       day TEXT NOT NULL,
       player_id TEXT NOT NULL,
       alliance TEXT,
       score INTEGER DEFAULT 0,
-      reason TEXT,
-      FOREIGN KEY (player_id) REFERENCES players(player_id)
-    );
+      reason TEXT
+    )
+  `);
 
+  database.run(`
     CREATE TABLE IF NOT EXISTS settings (
-      id INTEGER PRIMARY KEY DEFAULT 1,
+      id INTEGER PRIMARY KEY,
       weights TEXT,
       updated_at TEXT NOT NULL
-    );
+    )
+  `);
 
+  database.run(`
     CREATE TABLE IF NOT EXISTS imports (
       id TEXT PRIMARY KEY,
       filename TEXT NOT NULL,
       raw_csv TEXT NOT NULL,
       row_count INTEGER DEFAULT 0,
       created_at TEXT NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_appointments_day ON appointments(day);
-    CREATE INDEX IF NOT EXISTS idx_appointments_slot ON appointments(slot);
-    CREATE INDEX IF NOT EXISTS idx_waitlist_day ON waitlist(day);
-    CREATE INDEX IF NOT EXISTS idx_submissions_player ON submissions(player_id);
+    )
   `);
 
   // Initialize settings row if not exists
-  const settings = database.prepare('SELECT id FROM settings WHERE id = 1').get();
-  if (!settings) {
-    database.prepare('INSERT INTO settings (id, weights, updated_at) VALUES (1, ?, ?)').run('{}', new Date().toISOString());
+  const result = database.exec('SELECT id FROM settings WHERE id = 1');
+  if (result.length === 0) {
+    database.run("INSERT INTO settings (id, weights, updated_at) VALUES (1, '{}', ?)", [new Date().toISOString()]);
   }
 }
 
-// Helper to convert arrays to JSON strings for storage
 function toJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-// Helper to parse JSON strings from storage
 function parseJson<T>(value: string | null | undefined): T | null {
   if (!value) return null;
   try {
@@ -114,40 +130,62 @@ function parseJson<T>(value: string | null | undefined): T | null {
   }
 }
 
+function queryAll<T>(sql: string, params: unknown[] = []): T[] {
+  if (!db) return [];
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const results: T[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    results.push(row as T);
+  }
+  stmt.free();
+  return results;
+}
+
+function queryOne<T>(sql: string, params: unknown[] = []): T | null {
+  const results = queryAll<T>(sql, params);
+  return results.length > 0 ? results[0] : null;
+}
+
+function run(sql: string, params: unknown[] = []) {
+  if (!db) return;
+  db.run(sql, params);
+  saveDb();
+}
+
 // Database operations matching Supabase table structure
 export const dbOperations = {
+  // Initialize database (must be called before other operations)
+  init: async () => {
+    await initDb();
+  },
+
   // Players
   getPlayers: () => {
-    const db = getDb();
-    return db.prepare('SELECT player_id, name, alliance, updated_at FROM players ORDER BY name').all();
+    return queryAll<{ player_id: string; name: string; alliance: string; updated_at: string }>(
+      'SELECT player_id, name, alliance, updated_at FROM players ORDER BY name'
+    );
   },
 
   getPlayer: (playerId: string) => {
-    const db = getDb();
-    return db.prepare('SELECT * FROM players WHERE player_id = ?').get(playerId);
+    return queryOne<Record<string, unknown>>('SELECT * FROM players WHERE player_id = ?', [playerId]);
   },
 
   upsertPlayer: (player: { player_id: string; name: string; alliance: string; updated_at: string }) => {
-    const db = getDb();
-    db.prepare(`
-      INSERT INTO players (player_id, name, alliance, updated_at)
-      VALUES (@player_id, @name, @alliance, @updated_at)
-      ON CONFLICT(player_id) DO UPDATE SET
-        name = excluded.name,
-        alliance = excluded.alliance,
-        updated_at = excluded.updated_at
-    `).run(player);
+    run(
+      `INSERT OR REPLACE INTO players (player_id, name, alliance, updated_at) VALUES (?, ?, ?, ?)`,
+      [player.player_id, player.name, player.alliance, player.updated_at]
+    );
   },
 
   deleteAllPlayers: () => {
-    const db = getDb();
-    db.prepare('DELETE FROM players').run();
+    run('DELETE FROM players');
   },
 
   // Submissions
   getSubmissions: () => {
-    const db = getDb();
-    return db.prepare('SELECT * FROM submissions').all();
+    return queryAll<Record<string, unknown>>('SELECT * FROM submissions');
   },
 
   upsertSubmission: (submission: {
@@ -168,70 +206,45 @@ export const dbOperations = {
     thu_speedup_days?: number;
     submitted_at: string;
   }) => {
-    const db = getDb();
-    db.prepare(`
-      INSERT INTO submissions (
+    run(
+      `INSERT OR REPLACE INTO submissions (
         player_id, import_id, comment, requests_monday, requests_tuesday, requests_thursday,
         mon_hours, mon_normal_fc, mon_refined_fc, mon_speedup_days,
         tue_hours, tue_shards, tue_speedup_days,
         thu_hours, thu_speedup_days, submitted_at
-      )
-      VALUES (
-        @player_id, @import_id, @comment, @requests_monday, @requests_tuesday, @requests_thursday,
-        @mon_hours, @mon_normal_fc, @mon_refined_fc, @mon_speedup_days,
-        @tue_hours, @tue_shards, @tue_speedup_days,
-        @thu_hours, @thu_speedup_days, @submitted_at
-      )
-      ON CONFLICT(player_id) DO UPDATE SET
-        import_id = excluded.import_id,
-        comment = excluded.comment,
-        requests_monday = excluded.requests_monday,
-        requests_tuesday = excluded.requests_tuesday,
-        requests_thursday = excluded.requests_thursday,
-        mon_hours = excluded.mon_hours,
-        mon_normal_fc = excluded.mon_normal_fc,
-        mon_refined_fc = excluded.mon_refined_fc,
-        mon_speedup_days = excluded.mon_speedup_days,
-        tue_hours = excluded.tue_hours,
-        tue_shards = excluded.tue_shards,
-        tue_speedup_days = excluded.tue_speedup_days,
-        thu_hours = excluded.thu_hours,
-        thu_speedup_days = excluded.thu_speedup_days,
-        submitted_at = excluded.submitted_at
-    `).run({
-      player_id: submission.player_id,
-      import_id: submission.import_id || null,
-      comment: submission.comment || null,
-      requests_monday: submission.requests_monday ? 1 : 0,
-      requests_tuesday: submission.requests_tuesday ? 1 : 0,
-      requests_thursday: submission.requests_thursday ? 1 : 0,
-      mon_hours: toJson(submission.mon_hours || []),
-      mon_normal_fc: submission.mon_normal_fc || 0,
-      mon_refined_fc: submission.mon_refined_fc || 0,
-      mon_speedup_days: submission.mon_speedup_days || 0,
-      tue_hours: toJson(submission.tue_hours || []),
-      tue_shards: submission.tue_shards || 0,
-      tue_speedup_days: submission.tue_speedup_days || 0,
-      thu_hours: toJson(submission.thu_hours || []),
-      thu_speedup_days: submission.thu_speedup_days || 0,
-      submitted_at: submission.submitted_at,
-    });
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        submission.player_id,
+        submission.import_id || null,
+        submission.comment || null,
+        submission.requests_monday ? 1 : 0,
+        submission.requests_tuesday ? 1 : 0,
+        submission.requests_thursday ? 1 : 0,
+        toJson(submission.mon_hours || []),
+        submission.mon_normal_fc || 0,
+        submission.mon_refined_fc || 0,
+        submission.mon_speedup_days || 0,
+        toJson(submission.tue_hours || []),
+        submission.tue_shards || 0,
+        submission.tue_speedup_days || 0,
+        toJson(submission.thu_hours || []),
+        submission.thu_speedup_days || 0,
+        submission.submitted_at,
+      ]
+    );
   },
 
   deleteAllSubmissions: () => {
-    const db = getDb();
-    db.prepare('DELETE FROM submissions').run();
+    run('DELETE FROM submissions');
   },
 
   // Appointments
   getAppointments: () => {
-    const db = getDb();
-    return db.prepare('SELECT * FROM appointments').all();
+    return queryAll<Record<string, unknown>>('SELECT * FROM appointments');
   },
 
   getAppointmentsByDay: (day: string) => {
-    const db = getDb();
-    return db.prepare('SELECT * FROM appointments WHERE day = ?').all(day);
+    return queryAll<Record<string, unknown>>('SELECT * FROM appointments WHERE day = ?', [day]);
   },
 
   insertAppointment: (appointment: {
@@ -242,47 +255,42 @@ export const dbOperations = {
     alliance: string;
     score: number;
   }) => {
-    const db = getDb();
-    db.prepare(`
-      INSERT INTO appointments (id, day, slot, player_id, alliance, score)
-      VALUES (@id, @day, @slot, @player_id, @alliance, @score)
-    `).run(appointment);
+    run(
+      'INSERT INTO appointments (id, day, slot, player_id, alliance, score) VALUES (?, ?, ?, ?, ?, ?)',
+      [appointment.id, appointment.day, appointment.slot, appointment.player_id, appointment.alliance, appointment.score]
+    );
   },
 
   updateAppointment: (id: string, updates: { slot?: string; player_id?: string; alliance?: string; score?: number }) => {
-    const db = getDb();
     const sets: string[] = [];
-    const params: Record<string, unknown> = { id };
+    const params: unknown[] = [];
 
-    if (updates.slot !== undefined) { sets.push('slot = @slot'); params.slot = updates.slot; }
-    if (updates.player_id !== undefined) { sets.push('player_id = @player_id'); params.player_id = updates.player_id; }
-    if (updates.alliance !== undefined) { sets.push('alliance = @alliance'); params.alliance = updates.alliance; }
-    if (updates.score !== undefined) { sets.push('score = @score'); params.score = updates.score; }
+    if (updates.slot !== undefined) { sets.push('slot = ?'); params.push(updates.slot); }
+    if (updates.player_id !== undefined) { sets.push('player_id = ?'); params.push(updates.player_id); }
+    if (updates.alliance !== undefined) { sets.push('alliance = ?'); params.push(updates.alliance); }
+    if (updates.score !== undefined) { sets.push('score = ?'); params.push(updates.score); }
 
     if (sets.length > 0) {
-      db.prepare(`UPDATE appointments SET ${sets.join(', ')} WHERE id = @id`).run(params);
+      params.push(id);
+      run(`UPDATE appointments SET ${sets.join(', ')} WHERE id = ?`, params);
     }
   },
 
   deleteAppointment: (id: string) => {
-    const db = getDb();
-    db.prepare('DELETE FROM appointments WHERE id = ?').run(id);
+    run('DELETE FROM appointments WHERE id = ?', [id]);
   },
 
   deleteAllAppointments: () => {
-    const db = getDb();
-    db.prepare('DELETE FROM appointments').run();
+    run('DELETE FROM appointments');
   },
 
   // Waitlist
   getWaitlist: () => {
-    const db = getDb();
-    return db.prepare('SELECT * FROM waitlist').all();
+    return queryAll<Record<string, unknown>>('SELECT * FROM waitlist');
   },
 
   getWaitlistByDay: (day: string) => {
-    const db = getDb();
-    return db.prepare('SELECT * FROM waitlist WHERE day = ?').all(day);
+    return queryAll<Record<string, unknown>>('SELECT * FROM waitlist WHERE day = ?', [day]);
   },
 
   insertWaitlist: (entry: {
@@ -293,34 +301,23 @@ export const dbOperations = {
     score: number;
     reason?: string;
   }) => {
-    const db = getDb();
-    db.prepare(`
-      INSERT INTO waitlist (id, day, player_id, alliance, score, reason)
-      VALUES (@id, @day, @player_id, @alliance, @score, @reason)
-    `).run({
-      id: entry.id,
-      day: entry.day,
-      player_id: entry.player_id,
-      alliance: entry.alliance,
-      score: entry.score,
-      reason: entry.reason || null,
-    });
+    run(
+      'INSERT INTO waitlist (id, day, player_id, alliance, score, reason) VALUES (?, ?, ?, ?, ?, ?)',
+      [entry.id, entry.day, entry.player_id, entry.alliance, entry.score, entry.reason || null]
+    );
   },
 
   deleteWaitlist: (id: string) => {
-    const db = getDb();
-    db.prepare('DELETE FROM waitlist WHERE id = ?').run(id);
+    run('DELETE FROM waitlist WHERE id = ?', [id]);
   },
 
   deleteAllWaitlist: () => {
-    const db = getDb();
-    db.prepare('DELETE FROM waitlist').run();
+    run('DELETE FROM waitlist');
   },
 
   // Settings
   getSettings: () => {
-    const db = getDb();
-    const row = db.prepare('SELECT weights, updated_at FROM settings WHERE id = 1').get() as { weights: string; updated_at: string } | undefined;
+    const row = queryOne<{ weights: string; updated_at: string }>('SELECT weights, updated_at FROM settings WHERE id = 1');
     if (!row) return null;
     return {
       weights: parseJson(row.weights),
@@ -329,41 +326,29 @@ export const dbOperations = {
   },
 
   upsertSettings: (settings: { id: number; weights: unknown; updated_at: string }) => {
-    const db = getDb();
-    db.prepare(`
-      INSERT INTO settings (id, weights, updated_at)
-      VALUES (@id, @weights, @updated_at)
-      ON CONFLICT(id) DO UPDATE SET
-        weights = excluded.weights,
-        updated_at = excluded.updated_at
-    `).run({
-      id: settings.id,
-      weights: toJson(settings.weights),
-      updated_at: settings.updated_at,
-    });
+    run(
+      'INSERT OR REPLACE INTO settings (id, weights, updated_at) VALUES (?, ?, ?)',
+      [settings.id, toJson(settings.weights), settings.updated_at]
+    );
   },
 
   // Imports
   getImports: () => {
-    const db = getDb();
-    return db.prepare('SELECT * FROM imports ORDER BY created_at DESC').all();
+    return queryAll<Record<string, unknown>>('SELECT * FROM imports ORDER BY created_at DESC');
   },
 
   getLatestImport: () => {
-    const db = getDb();
-    return db.prepare('SELECT * FROM imports ORDER BY created_at DESC LIMIT 1').get();
+    return queryOne<Record<string, unknown>>('SELECT * FROM imports ORDER BY created_at DESC LIMIT 1');
   },
 
   insertImport: (imp: { id: string; filename: string; raw_csv: string; row_count: number; created_at: string }) => {
-    const db = getDb();
-    db.prepare(`
-      INSERT INTO imports (id, filename, raw_csv, row_count, created_at)
-      VALUES (@id, @filename, @raw_csv, @row_count, @created_at)
-    `).run(imp);
+    run(
+      'INSERT INTO imports (id, filename, raw_csv, row_count, created_at) VALUES (?, ?, ?, ?, ?)',
+      [imp.id, imp.filename, imp.raw_csv, imp.row_count, imp.created_at]
+    );
   },
 
   deleteAllImports: () => {
-    const db = getDb();
-    db.prepare('DELETE FROM imports').run();
+    run('DELETE FROM imports');
   },
 };
