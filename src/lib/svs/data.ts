@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { dbOperations } from "@/integrations/sqlite/client";
+import { api } from "@/integrations/api/client";
 import { scheduleDay } from "./schedule";
 import {
   DAYS,
@@ -12,15 +12,6 @@ import {
   type WaitlistEntry,
   type Weights,
 } from "./types";
-
-// Initialize database on load
-let dbInitialized = false;
-async function ensureDb() {
-  if (!dbInitialized) {
-    await dbOperations.init();
-    dbInitialized = true;
-  }
-}
 
 // 8 hand-picked colors from clearly different named hue families (red/blue/yellow/purple/
 // green/pink/cyan/orange), not a computed hue rotation. Evenly-spaced or stride-reordered hue
@@ -74,9 +65,19 @@ export function useRoster() {
   return useQuery({
     queryKey: ["roster"],
     queryFn: async () => {
-      await ensureDb();
-      const players = dbOperations.getPlayers();
-      const submissions = dbOperations.getSubmissions();
+      const players = await api.getPlayers();
+      const submissions = await api.getSubmissions();
+
+      // Parse hours arrays from JSON strings and convert 0/1 to booleans
+      const parsedSubmissions = (submissions ?? []).map((s: Record<string, unknown>) => ({
+        ...s,
+        requests_monday: Boolean(s.requests_monday),
+        requests_tuesday: Boolean(s.requests_tuesday),
+        requests_thursday: Boolean(s.requests_thursday),
+        mon_hours: typeof s.mon_hours === 'string' ? JSON.parse(s.mon_hours as string) : s.mon_hours,
+        tue_hours: typeof s.tue_hours === 'string' ? JSON.parse(s.tue_hours as string) : s.tue_hours,
+        thu_hours: typeof s.thu_hours === 'string' ? JSON.parse(s.thu_hours as string) : s.thu_hours,
+      }));
 
       const byId: Record<string, Player> = {};
       for (const p of (players ?? []) as Player[]) byId[p.player_id] = p;
@@ -84,7 +85,7 @@ export function useRoster() {
       return {
         players: (players ?? []) as Player[],
         playersById: byId,
-        submissions: (submissions ?? []) as unknown as Submission[],
+        submissions: parsedSubmissions as unknown as Submission[],
       };
     },
   });
@@ -94,9 +95,8 @@ export function useSchedule() {
   return useQuery({
     queryKey: ["schedule"],
     queryFn: async () => {
-      await ensureDb();
-      const appts = dbOperations.getAppointments();
-      const wl = dbOperations.getWaitlist();
+      const appts = await api.getAppointments();
+      const wl = await api.getWaitlist();
 
       return {
         appointments: (appts ?? []) as unknown as Appointment[],
@@ -110,8 +110,7 @@ export function useWeights() {
   return useQuery({
     queryKey: ["weights"],
     queryFn: async () => {
-      await ensureDb();
-      const settings = dbOperations.getSettings();
+      const settings = await api.getSettings();
       const weights = settings?.weights ?? {};
       return { ...DEFAULT_WEIGHTS, ...(weights as Partial<Weights>) } as Weights;
     },
@@ -122,7 +121,7 @@ export function useSaveWeights() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (weights: Weights) => {
-      dbOperations.upsertSettings({
+      await api.upsertSettings({
         id: 1,
         weights,
         updated_at: new Date().toISOString(),
@@ -136,9 +135,20 @@ export function useRecompute() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const players = dbOperations.getPlayers();
-      const subs = dbOperations.getSubmissions();
-      const settings = dbOperations.getSettings();
+      const players = await api.getPlayers();
+      const subsRaw = await api.getSubmissions();
+      const settings = await api.getSettings();
+
+      // Parse hours arrays from JSON strings and convert 0/1 to booleans
+      const subs = (subsRaw ?? []).map((s: Record<string, unknown>) => ({
+        ...s,
+        requests_monday: Boolean(s.requests_monday),
+        requests_tuesday: Boolean(s.requests_tuesday),
+        requests_thursday: Boolean(s.requests_thursday),
+        mon_hours: typeof s.mon_hours === 'string' ? JSON.parse(s.mon_hours as string) : s.mon_hours,
+        tue_hours: typeof s.tue_hours === 'string' ? JSON.parse(s.tue_hours as string) : s.tue_hours,
+        thu_hours: typeof s.thu_hours === 'string' ? JSON.parse(s.thu_hours as string) : s.thu_hours,
+      }));
 
       const weights = {
         ...DEFAULT_WEIGHTS,
@@ -152,7 +162,7 @@ export function useRecompute() {
       for (const d of DAYS) {
         const res = scheduleDay(
           d.key,
-          (subs ?? []) as unknown as Submission[],
+          subs as unknown as Submission[],
           byId,
           weights,
         );
@@ -160,12 +170,12 @@ export function useRecompute() {
         waitlist.push(...res.waitlist);
       }
 
-      dbOperations.deleteAllAppointments();
-      dbOperations.deleteAllWaitlist();
+      await api.deleteAllAppointments();
+      await api.deleteAllWaitlist();
 
       for (const appt of appointments) {
-        dbOperations.insertAppointment({
-          id: appt.id,
+        await api.insertAppointment({
+          id: crypto.randomUUID(),
           day: appt.day,
           slot: appt.slot,
           player_id: appt.player_id,
@@ -174,7 +184,7 @@ export function useRecompute() {
         });
       }
       for (const w of waitlist) {
-        dbOperations.insertWaitlist({
+        await api.insertWaitlist({
           id: w.id,
           day: w.day,
           player_id: w.player_id,
@@ -191,11 +201,11 @@ export function useRecompute() {
 }
 
 async function wipeAll() {
-  dbOperations.deleteAllAppointments();
-  dbOperations.deleteAllWaitlist();
-  dbOperations.deleteAllSubmissions();
-  dbOperations.deleteAllPlayers();
-  dbOperations.deleteAllImports();
+  await api.deleteAllAppointments();
+  await api.deleteAllWaitlist();
+  await api.deleteAllSubmissions();
+  await api.deleteAllPlayers();
+  await api.deleteAllImports();
 }
 
 export function useClearAll() {
@@ -215,8 +225,7 @@ export function useLatestImport() {
   return useQuery({
     queryKey: ["latestImport"],
     queryFn: async () => {
-      await ensureDb();
-      const data = dbOperations.getLatestImport();
+      const data = await api.getLatestImport();
       return data as {
         filename: string;
         raw_csv: string;
@@ -233,8 +242,8 @@ export function useSetSlot() {
   return useMutation({
     mutationFn: async (args: { day: DayKey; slot: string; playerId: string | null }) => {
       const { day, slot, playerId } = args;
-      const apptRows = dbOperations.getAppointmentsByDay(day);
-      const wlRows = dbOperations.getWaitlistByDay(day);
+      const apptRows = await api.getAppointmentsByDay(day);
+      const wlRows = await api.getWaitlistByDay(day);
 
       const appts = (apptRows ?? []) as unknown as (Appointment & { id: string })[];
       const wl = (wlRows ?? []) as unknown as (WaitlistEntry & { id: string })[];
@@ -242,8 +251,8 @@ export function useSetSlot() {
 
       if (!playerId) {
         if (!occupant) return;
-        dbOperations.deleteAppointment(occupant.id);
-        dbOperations.insertWaitlist({
+        await api.deleteAppointment(occupant.id);
+        await api.insertWaitlist({
           id: crypto.randomUUID(),
           day,
           player_id: occupant.player_id,
@@ -261,25 +270,25 @@ export function useSetSlot() {
           // (day, slot) is unique, so park the occupant on a scratch slot first to avoid
           // colliding with the source's target slot while both updates are in flight.
           const tempSlot = `__swap_${occupant.id}`;
-          dbOperations.updateAppointment(occupant.id, { slot: tempSlot });
-          dbOperations.updateAppointment(source.id, { slot });
-          dbOperations.updateAppointment(occupant.id, { slot: source.slot });
+          await api.updateAppointment(occupant.id, { slot: tempSlot });
+          await api.updateAppointment(source.id, { slot });
+          await api.updateAppointment(occupant.id, { slot: source.slot });
         } else {
-          dbOperations.updateAppointment(source.id, { slot });
+          await api.updateAppointment(source.id, { slot });
         }
         return;
       }
 
       const entry = wl.find((w) => w.player_id === playerId);
       if (!entry) return;
-      dbOperations.deleteWaitlist(entry.id);
+      await api.deleteWaitlist(entry.id);
       if (occupant) {
-        dbOperations.updateAppointment(occupant.id, {
+        await api.updateAppointment(occupant.id, {
           player_id: entry.player_id,
           alliance: entry.alliance,
           score: entry.score
         });
-        dbOperations.insertWaitlist({
+        await api.insertWaitlist({
           id: crypto.randomUUID(),
           day,
           player_id: occupant.player_id,
@@ -288,7 +297,7 @@ export function useSetSlot() {
           reason: "replaced manually",
         });
       } else {
-        dbOperations.insertAppointment({
+        await api.insertAppointment({
           id: crypto.randomUUID(),
           day,
           slot,
@@ -314,7 +323,7 @@ export function useImportCsv() {
       await wipeAll();
 
       const importId = crypto.randomUUID();
-      dbOperations.insertImport({
+      await api.insertImport({
         id: importId,
         filename: args.filename,
         raw_csv: args.raw,
@@ -323,7 +332,7 @@ export function useImportCsv() {
       });
 
       for (const p of args.players) {
-        dbOperations.upsertPlayer({
+        await api.upsertPlayer({
           player_id: p.player_id,
           name: p.name,
           alliance: p.alliance,
@@ -332,7 +341,7 @@ export function useImportCsv() {
       }
 
       for (const s of args.submissions) {
-        dbOperations.upsertSubmission({
+        await api.upsertSubmission({
           player_id: s.player_id,
           import_id: importId,
           comment: s.comment,
