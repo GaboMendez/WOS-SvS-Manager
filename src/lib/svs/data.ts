@@ -185,7 +185,7 @@ export function useRecompute() {
       }
       for (const w of waitlist) {
         await api.insertWaitlist({
-          id: w.id,
+          id: crypto.randomUUID(),
           day: w.day,
           player_id: w.player_id,
           alliance: w.alliance,

@@ -118,7 +118,24 @@ A dedicated page generates copy-paste-ready messages for each alliance's R4/R5 t
 
 ### Database
 
-The app uses a local SQLite database stored at `data/wos.db`. The database is automatically created on first run.
+- **Development**: Local SQLite at `data/wos.db`
+- **Production**: Turso (LibSQL) - a free cloud SQLite database
+
+#### Turso Setup (Production)
+
+1. Create a free account at [turso.tech](https://turso.tech)
+2. Create a database and get the connection string
+3. Create an auth token in Turso dashboard → Settings → Tokens
+
+#### Environment Variables
+
+Create a `.env` file:
+
+```env
+PORT=3001
+TURSO_DATABASE_URL=libsql://your-database.turso.io
+TURSO_AUTH_TOKEN=your-auth-token
+```
 
 ### Other scripts
 
