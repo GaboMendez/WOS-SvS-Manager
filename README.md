@@ -127,6 +127,18 @@ A dedicated page generates copy-paste-ready messages for each alliance's R4/R5 t
 2. Create a database and get the connection string
 3. Create an auth token in Turso dashboard → Settings → Tokens
 
+#### Deploying the API
+
+The frontend runs on Vercel, but the API server needs to be deployed separately (Render.com - free tier):
+
+1. Deploy to [Render.com](https://render.com):
+   - Connect your GitHub repo
+   - Build Command: `npm install`
+   - Start Command: `npm run dev:server`
+   - Add environment variables: `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`
+
+2. Get your Render URL (e.g., `https://wos-svs-manager.onrender.com`)
+
 #### Environment Variables
 
 Create a `.env` file:
@@ -135,6 +147,7 @@ Create a `.env` file:
 PORT=3001
 TURSO_DATABASE_URL=libsql://your-database.turso.io
 TURSO_AUTH_TOKEN=your-auth-token
+VITE_API_URL=https://your-render-app.onrender.com/api
 ```
 
 ### Other scripts
