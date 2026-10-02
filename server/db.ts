@@ -1,24 +1,13 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+import { createClient } from '@libsql/client';
+import { DB_PATH } from './path.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.resolve(__dirname, '../data/wos.db');
+const db = createClient({
+  url: DB_PATH,
+  authToken: process.env.TURSO_AUTH_TOKEN
+});
 
-// Ensure data directory exists
-const dataDir = path.dirname(dbPath);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
-
-initializeSchema();
-
-function initializeSchema() {
-  db.exec(`
+async function initializeSchema() {
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS players (
       player_id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -27,7 +16,7 @@ function initializeSchema() {
     )
   `);
 
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS submissions (
       player_id TEXT PRIMARY KEY,
       import_id TEXT,
@@ -48,7 +37,7 @@ function initializeSchema() {
     )
   `);
 
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS appointments (
       id TEXT PRIMARY KEY,
       day TEXT NOT NULL,
@@ -59,7 +48,7 @@ function initializeSchema() {
     )
   `);
 
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS waitlist (
       id TEXT PRIMARY KEY,
       day TEXT NOT NULL,
@@ -70,7 +59,7 @@ function initializeSchema() {
     )
   `);
 
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY,
       weights TEXT,
@@ -78,7 +67,7 @@ function initializeSchema() {
     )
   `);
 
-  db.exec(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS imports (
       id TEXT PRIMARY KEY,
       filename TEXT NOT NULL,
@@ -89,9 +78,9 @@ function initializeSchema() {
   `);
 
   // Initialize settings row if not exists
-  const result = db.prepare('SELECT id FROM settings WHERE id = 1').get();
-  if (!result) {
-    db.prepare("INSERT INTO settings (id, weights, updated_at) VALUES (1, '{}', ?)").run(new Date().toISOString());
+  const result = await db.execute('SELECT id FROM settings WHERE id = 1');
+  if (result.rows.length === 0) {
+    await db.execute("INSERT INTO settings (id, weights, updated_at) VALUES (1, '{}', ?)", [new Date().toISOString()]);
   }
 }
 
@@ -108,24 +97,28 @@ function parseJson<T>(value: string | null | undefined): T | null {
   }
 }
 
+// Initialize on load
+initializeSchema().catch(console.error);
+
 // Players
 export function getPlayers() {
-  return db.prepare('SELECT player_id, name, alliance, updated_at FROM players ORDER BY name').all();
+  return db.execute('SELECT player_id, name, alliance, updated_at FROM players ORDER BY name');
 }
 
 export function upsertPlayer(player: { player_id: string; name: string; alliance: string; updated_at: string }) {
-  db.prepare(`INSERT OR REPLACE INTO players (player_id, name, alliance, updated_at) VALUES (?, ?, ?, ?)`).run(
-    player.player_id, player.name, player.alliance, player.updated_at
+  return db.execute(
+    `INSERT OR REPLACE INTO players (player_id, name, alliance, updated_at) VALUES (?, ?, ?, ?)`,
+    [player.player_id, player.name || '', player.alliance || '', player.updated_at]
   );
 }
 
 export function deleteAllPlayers() {
-  db.prepare('DELETE FROM players').run();
+  return db.execute('DELETE FROM players');
 }
 
 // Submissions
 export function getSubmissions() {
-  return db.prepare('SELECT * FROM submissions').all();
+  return db.execute('SELECT * FROM submissions');
 }
 
 export function upsertSubmission(submission: {
@@ -146,47 +139,50 @@ export function upsertSubmission(submission: {
   thu_speedup_days?: number;
   submitted_at: string;
 }) {
-  db.prepare(`INSERT OR REPLACE INTO submissions (
+  return db.execute(`INSERT OR REPLACE INTO submissions (
     player_id, import_id, comment, requests_monday, requests_tuesday, requests_thursday,
     mon_hours, mon_normal_fc, mon_refined_fc, mon_speedup_days,
     tue_hours, tue_shards, tue_speedup_days,
     thu_hours, thu_speedup_days, submitted_at
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-    submission.player_id,
-    submission.import_id || null,
-    submission.comment || null,
-    submission.requests_monday ? 1 : 0,
-    submission.requests_tuesday ? 1 : 0,
-    submission.requests_thursday ? 1 : 0,
-    toJson(submission.mon_hours || []),
-    submission.mon_normal_fc || 0,
-    submission.mon_refined_fc || 0,
-    submission.mon_speedup_days || 0,
-    toJson(submission.tue_hours || []),
-    submission.tue_shards || 0,
-    submission.tue_speedup_days || 0,
-    toJson(submission.thu_hours || []),
-    submission.thu_speedup_days || 0,
-    submission.submitted_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      submission.player_id,
+      submission.import_id || null,
+      submission.comment || null,
+      submission.requests_monday ? 1 : 0,
+      submission.requests_tuesday ? 1 : 0,
+      submission.requests_thursday ? 1 : 0,
+      toJson(submission.mon_hours || []),
+      submission.mon_normal_fc || 0,
+      submission.mon_refined_fc || 0,
+      submission.mon_speedup_days || 0,
+      toJson(submission.tue_hours || []),
+      submission.tue_shards || 0,
+      submission.tue_speedup_days || 0,
+      toJson(submission.thu_hours || []),
+      submission.thu_speedup_days || 0,
+      submission.submitted_at
+    ]
   );
 }
 
 export function deleteAllSubmissions() {
-  db.prepare('DELETE FROM submissions').run();
+  return db.execute('DELETE FROM submissions');
 }
 
 // Appointments
 export function getAppointments() {
-  return db.prepare('SELECT * FROM appointments').all();
+  return db.execute('SELECT * FROM appointments');
 }
 
 export function getAppointmentsByDay(day: string) {
-  return db.prepare('SELECT * FROM appointments WHERE day = ?').all(day);
+  return db.execute('SELECT * FROM appointments WHERE day = ?', [day]);
 }
 
-export function insertAppointment(appointment: { id: string; day: string; slot: string; player_id: string; alliance: string; score: number }) {
-  db.prepare('INSERT INTO appointments (id, day, slot, player_id, alliance, score) VALUES (?, ?, ?, ?, ?, ?)').run(
-    appointment.id, appointment.day, appointment.slot, appointment.player_id, appointment.alliance, appointment.score
+export function insertAppointment(appointment: { id: string; day: string; slot: string; player_id: string; alliance?: string; score?: number }) {
+  return db.execute(
+    'INSERT INTO appointments (id, day, slot, player_id, alliance, score) VALUES (?, ?, ?, ?, ?, ?)',
+    [appointment.id, appointment.day, appointment.slot, appointment.player_id, appointment.alliance || '', appointment.score ?? 0]
   );
 }
 
@@ -201,45 +197,55 @@ export function updateAppointment(id: string, updates: { slot?: string; player_i
 
   if (sets.length > 0) {
     params.push(id);
-    db.prepare(`UPDATE appointments SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    return db.execute(`UPDATE appointments SET ${sets.join(', ')} WHERE id = ?`, params);
   }
 }
 
 export function deleteAppointment(id: string) {
-  db.prepare('DELETE FROM appointments WHERE id = ?').run(id);
+  return db.execute('DELETE FROM appointments WHERE id = ?', [id]);
 }
 
 export function deleteAllAppointments() {
-  db.prepare('DELETE FROM appointments').run();
+  return db.execute('DELETE FROM appointments');
 }
 
 // Waitlist
 export function getWaitlist() {
-  return db.prepare('SELECT * FROM waitlist').all();
+  return db.execute('SELECT * FROM waitlist');
 }
 
 export function getWaitlistByDay(day: string) {
-  return db.prepare('SELECT * FROM waitlist WHERE day = ?').all(day);
+  return db.execute('SELECT * FROM waitlist WHERE day = ?', [day]);
 }
 
-export function insertWaitlist(entry: { id: string; day: string; player_id: string; alliance: string; score: number; reason?: string }) {
-  db.prepare('INSERT INTO waitlist (id, day, player_id, alliance, score, reason) VALUES (?, ?, ?, ?, ?, ?)').run(
-    entry.id, entry.day, entry.player_id, entry.alliance, entry.score, entry.reason || null
+export function insertWaitlist(entry: { id: string; day: string; player_id: string; alliance?: string; score?: number; reason?: string }) {
+  const values = [
+    entry.id ?? '',
+    entry.day ?? '',
+    entry.player_id ?? '',
+    entry.alliance ?? '',
+    entry.score ?? 0,
+    entry.reason ?? null
+  ];
+  return db.execute(
+    'INSERT INTO waitlist (id, day, player_id, alliance, score, reason) VALUES (?, ?, ?, ?, ?, ?)',
+    values
   );
 }
 
 export function deleteWaitlist(id: string) {
-  db.prepare('DELETE FROM waitlist WHERE id = ?').run(id);
+  return db.execute('DELETE FROM waitlist WHERE id = ?', [id]);
 }
 
 export function deleteAllWaitlist() {
-  db.prepare('DELETE FROM waitlist').run();
+  return db.execute('DELETE FROM waitlist');
 }
 
 // Settings
-export function getSettings() {
-  const row = db.prepare('SELECT weights, updated_at FROM settings WHERE id = 1').get() as { weights: string; updated_at: string } | undefined;
-  if (!row) return null;
+export async function getSettings() {
+  const result = await db.execute('SELECT weights, updated_at FROM settings WHERE id = 1');
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0] as { weights: string; updated_at: string };
   return {
     weights: parseJson(row.weights),
     updated_at: row.updated_at,
@@ -247,22 +253,24 @@ export function getSettings() {
 }
 
 export function upsertSettings(settings: { id: number; weights: unknown; updated_at: string }) {
-  db.prepare('INSERT OR REPLACE INTO settings (id, weights, updated_at) VALUES (?, ?, ?)').run(
-    settings.id, toJson(settings.weights), settings.updated_at
+  return db.execute(
+    'INSERT OR REPLACE INTO settings (id, weights, updated_at) VALUES (?, ?, ?)',
+    [settings.id, toJson(settings.weights), settings.updated_at]
   );
 }
 
 // Imports
 export function getLatestImport() {
-  return db.prepare('SELECT * FROM imports ORDER BY created_at DESC LIMIT 1').get();
+  return db.execute('SELECT * FROM imports ORDER BY created_at DESC LIMIT 1');
 }
 
 export function insertImport(imp: { id: string; filename: string; raw_csv: string; row_count: number; created_at: string }) {
-  db.prepare('INSERT INTO imports (id, filename, raw_csv, row_count, created_at) VALUES (?, ?, ?, ?, ?)').run(
-    imp.id, imp.filename, imp.raw_csv, imp.row_count, imp.created_at
+  return db.execute(
+    'INSERT INTO imports (id, filename, raw_csv, row_count, created_at) VALUES (?, ?, ?, ?, ?)',
+    [imp.id, imp.filename, imp.raw_csv, imp.row_count, imp.created_at]
   );
 }
 
 export function deleteAllImports() {
-  db.prepare('DELETE FROM imports').run();
+  return db.execute('DELETE FROM imports');
 }
