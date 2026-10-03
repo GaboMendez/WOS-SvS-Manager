@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+build
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Logs
+*.log
+
+# Data (we mount this volume)
+data
+
+# Env files (we set env vars in compose)
+.env
+.env.*
+
+# React app files (not needed for server)
+src
+public
+components.json
+vite.config.ts
+tailwind.config
+eslint

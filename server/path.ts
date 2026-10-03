@@ -3,5 +3,6 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Use local SQLite for development, Turso for production
-export const DB_PATH = process.env.TURSO_DATABASE_URL || `file:${path.resolve(__dirname, '../data/wos.db')}`;
+// In Docker, data is stored at /app/data/wos.db
+const dataDir = process.env.DOCKER ? '/app/data' : path.resolve(__dirname, '../data');
+export const DB_PATH = `file:${path.join(dataDir, 'wos.db')}`;
