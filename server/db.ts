@@ -2,8 +2,7 @@ import { createClient } from '@libsql/client';
 import { DB_PATH } from './path.js';
 
 const db = createClient({
-  url: DB_PATH,
-  authToken: process.env.TURSO_AUTH_TOKEN
+  url: DB_PATH
 });
 
 async function initializeSchema() {
