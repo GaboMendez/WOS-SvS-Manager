@@ -119,9 +119,9 @@ A dedicated page generates copy-paste-ready messages for each alliance's R4/R5 t
 ### Database
 
 - **Development**: Local SQLite at `data/wos-svs-manager.db`
-- **Production**: Local SQLite with Docker volume mounting for data persistence
+- **Production**: Local SQLite with Docker/Fly.io volume for data persistence
 
-#### Running with Docker
+#### Running Locally with Docker
 
 ```bash
 docker-compose up -d
@@ -134,9 +134,14 @@ The SQLite database is stored in the `data/` directory on the host and mounted i
 Create a `.env` file:
 
 ```env
-PORT=3001
-VITE_API_URL=https://your-render-app.onrender.com/api
+VITE_API_URL=http://localhost:3001/api
 ```
+
+### Deployment
+
+**Backend API**: Hosted on [Fly.io](https://fly.io) at `https://wos-svs-manager-api.fly.dev/api`
+
+The backend uses a local SQLite database with persistent volume storage. For local development, you can run the API locally with Docker (see above) or connect to the production API.
 
 ### Other scripts
 
