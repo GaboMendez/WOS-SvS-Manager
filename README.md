@@ -118,7 +118,7 @@ A dedicated page generates copy-paste-ready messages for each alliance's R4/R5 t
 
 ### Database
 
-- **Development**: Local SQLite at `data/wos.db`
+- **Development**: Local SQLite at `data/wos-svs-manager.db`
 - **Production**: Local SQLite with Docker volume mounting for data persistence
 
 #### Running with Docker
