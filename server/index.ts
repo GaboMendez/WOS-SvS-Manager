@@ -24,8 +24,8 @@ app.get('/api/players', handleError(async (_req, res) => {
   res.json(result.rows);
 }));
 
-app.post('/api/players', handleError(async (req, res) => {
-  await db.upsertPlayer(req.body);
+app.post('/api/players/bulk', handleError(async (req, res) => {
+  await db.insertPlayersBulk(req.body);
   res.json({ success: true });
 }));
 
@@ -40,8 +40,8 @@ app.get('/api/submissions', handleError(async (_req, res) => {
   res.json(result.rows);
 }));
 
-app.post('/api/submissions', handleError(async (req, res) => {
-  await db.upsertSubmission(req.body);
+app.post('/api/submissions/bulk', handleError(async (req, res) => {
+  await db.insertSubmissionsBulk(req.body);
   res.json({ success: true });
 }));
 
@@ -63,6 +63,11 @@ app.get('/api/appointments/:day', handleError(async (req, res) => {
 
 app.post('/api/appointments', handleError(async (req, res) => {
   await db.insertAppointment(req.body);
+  res.json({ success: true });
+}));
+
+app.post('/api/appointments/bulk', handleError(async (req, res) => {
+  await db.insertAppointmentsBulk(req.body);
   res.json({ success: true });
 }));
 
@@ -94,6 +99,11 @@ app.get('/api/waitlist/:day', handleError(async (req, res) => {
 
 app.post('/api/waitlist', handleError(async (req, res) => {
   await db.insertWaitlist(req.body);
+  res.json({ success: true });
+}));
+
+app.post('/api/waitlist/bulk', handleError(async (req, res) => {
+  await db.insertWaitlistBulk(req.body);
   res.json({ success: true });
 }));
 
