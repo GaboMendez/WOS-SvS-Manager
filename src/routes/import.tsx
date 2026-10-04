@@ -44,7 +44,6 @@ function ImportPage() {
   const csvBody = csvRows.slice(1);
 
   async function onFile(file: File) {
-    setIsLoading(true);
     const text = await file.text();
     try {
       const result = parseCsv(text);
@@ -54,13 +53,12 @@ function ImportPage() {
     } catch (e) {
       toast.error("That file could not be read as a sign-up export.");
       console.error(e);
-    } finally {
-      setIsLoading(false);
     }
   }
 
   function save() {
     if (!parsed) return;
+    setIsLoading(true);
     importCsv.mutate(
       { filename, raw, players: parsed.players, submissions: parsed.submissions },
       {
@@ -72,15 +70,31 @@ function ImportPage() {
                 navigate({ to: "/" });
               }, 700);
             },
-            onError: (e) => toast.error(e.message),
+            onError: (e) => {
+              setIsLoading(false);
+              toast.error(e.message);
+            },
           }),
-        onError: (e) => toast.error(e.message),
+        onError: (e) => {
+          setIsLoading(false);
+          toast.error(e.message);
+        },
       },
     );
   }
 
+  const isImporting = isLoading || importCsv.isPending || recompute.isPending;
+
   return (
     <AppShell>
+      {isImporting && (
+        <div className="fixed inset-0 z-50 bg-ink/80 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="mt-3 text-sm font-medium">Importing and building schedule...</p>
+          </div>
+        </div>
+      )}
       <div className="sticky top-0 z-20 bg-ink border-b border-line px-4 py-2.5 flex items-center gap-3">
         <h1 className="text-base font-semibold tracking-tight">Import sign-ups</h1>
         <span className="hidden sm:inline font-mono text-[11px] text-mut">
@@ -182,19 +196,12 @@ function ImportPage() {
             type="file"
             accept=".csv,text/csv"
             className="hidden"
-            disabled={isLoading}
             onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
           />
-          {isLoading ? (
-            <p className="text-sm font-medium">Loading file...</p>
-          ) : (
-            <>
-              <p className="text-sm font-medium">Choose a CSV file</p>
-              <p className="font-mono text-[11px] text-mut mt-1">
-                Latest submission per player ID is kept · times read as UTC hours
-              </p>
-            </>
-          )}
+          <p className="text-sm font-medium">Choose a CSV file</p>
+          <p className="font-mono text-[11px] text-mut mt-1">
+            Latest submission per player ID is kept · times read as UTC hours
+          </p>
         </label>
 
         {parsed ? (
@@ -240,12 +247,9 @@ function ImportPage() {
 
             <button
               onClick={save}
-              disabled={importCsv.isPending || recompute.isPending}
-              className="text-sm font-medium px-4 py-2 rounded-md bg-primary text-primary-foreground disabled:opacity-50"
+              className="text-sm font-medium px-4 py-2 rounded-md bg-primary text-primary-foreground"
             >
-              {importCsv.isPending || recompute.isPending
-                ? "Saving…"
-                : "Save import and build schedule"}
+              Save import and build schedule
             </button>
           </>
         ) : null}
