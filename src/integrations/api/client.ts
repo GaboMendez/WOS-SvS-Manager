@@ -18,10 +18,10 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 export const api = {
   getPlayers: () => fetchJson<unknown[]>(`${API_BASE}/players`),
 
-  upsertPlayer: (player: { player_id: string; name: string; alliance: string; updated_at: string }) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/players`, {
+  insertPlayersBulk: (players: { player_id: string; name: string; alliance: string; updated_at: string }[]) =>
+    fetchJson<{ success: boolean }>(`${API_BASE}/players/bulk`, {
       method: 'POST',
-      body: JSON.stringify(player),
+      body: JSON.stringify(players),
     }),
 
   deleteAllPlayers: () => fetchJson<{ success: boolean }>(`${API_BASE}/players`, { method: 'DELETE' }),
@@ -29,7 +29,7 @@ export const api = {
   // Submissions
   getSubmissions: () => fetchJson<unknown[]>(`${API_BASE}/submissions`),
 
-  upsertSubmission: (submission: {
+  insertSubmissionsBulk: (submissions: {
     player_id: string;
     import_id?: string;
     comment?: string;
@@ -46,10 +46,10 @@ export const api = {
     thu_hours?: number[];
     thu_speedup_days?: number;
     submitted_at: string;
-  }) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/submissions`, {
+  }[]) =>
+    fetchJson<{ success: boolean }>(`${API_BASE}/submissions/bulk`, {
       method: 'POST',
-      body: JSON.stringify(submission),
+      body: JSON.stringify(submissions),
     }),
 
   deleteAllSubmissions: () => fetchJson<{ success: boolean }>(`${API_BASE}/submissions`, { method: 'DELETE' }),
@@ -63,6 +63,12 @@ export const api = {
     fetchJson<{ success: boolean }>(`${API_BASE}/appointments`, {
       method: 'POST',
       body: JSON.stringify(appointment),
+    }),
+
+  insertAppointmentsBulk: (appointments: { id: string; day: string; slot: string; player_id: string; alliance: string; score: number }[]) =>
+    fetchJson<{ success: boolean }>(`${API_BASE}/appointments/bulk`, {
+      method: 'POST',
+      body: JSON.stringify(appointments),
     }),
 
   updateAppointment: (id: string, updates: { slot?: string; player_id?: string; alliance?: string; score?: number }) =>
@@ -85,6 +91,12 @@ export const api = {
     fetchJson<{ success: boolean }>(`${API_BASE}/waitlist`, {
       method: 'POST',
       body: JSON.stringify(entry),
+    }),
+
+  insertWaitlistBulk: (entries: { id: string; day: string; player_id: string; alliance: string; score: number; reason?: string }[]) =>
+    fetchJson<{ success: boolean }>(`${API_BASE}/waitlist/bulk`, {
+      method: 'POST',
+      body: JSON.stringify(entries),
     }),
 
   deleteWaitlist: (id: string) =>

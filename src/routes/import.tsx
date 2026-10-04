@@ -31,6 +31,7 @@ function ImportPage() {
   const [raw, setRaw] = useState("");
   const [filename, setFilename] = useState("");
   const [showCsv, setShowCsv] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const importCsv = useImportCsv();
   const recompute = useRecompute();
   const latestImport = useLatestImport();
@@ -43,6 +44,7 @@ function ImportPage() {
   const csvBody = csvRows.slice(1);
 
   async function onFile(file: File) {
+    setIsLoading(true);
     const text = await file.text();
     try {
       const result = parseCsv(text);
@@ -52,6 +54,8 @@ function ImportPage() {
     } catch (e) {
       toast.error("That file could not be read as a sign-up export.");
       console.error(e);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -178,12 +182,19 @@ function ImportPage() {
             type="file"
             accept=".csv,text/csv"
             className="hidden"
+            disabled={isLoading}
             onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
           />
-          <p className="text-sm font-medium">Choose a CSV file</p>
-          <p className="font-mono text-[11px] text-mut mt-1">
-            Latest submission per player ID is kept · times read as UTC hours
-          </p>
+          {isLoading ? (
+            <p className="text-sm font-medium">Loading file...</p>
+          ) : (
+            <>
+              <p className="text-sm font-medium">Choose a CSV file</p>
+              <p className="font-mono text-[11px] text-mut mt-1">
+                Latest submission per player ID is kept · times read as UTC hours
+              </p>
+            </>
+          )}
         </label>
 
         {parsed ? (

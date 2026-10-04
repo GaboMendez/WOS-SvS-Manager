@@ -173,26 +173,27 @@ export function useRecompute() {
       await api.deleteAllAppointments();
       await api.deleteAllWaitlist();
 
-      for (const appt of appointments) {
-        await api.insertAppointment({
-          id: crypto.randomUUID(),
-          day: appt.day,
-          slot: appt.slot,
-          player_id: appt.player_id,
-          alliance: appt.alliance,
-          score: appt.score,
-        });
-      }
-      for (const w of waitlist) {
-        await api.insertWaitlist({
-          id: crypto.randomUUID(),
-          day: w.day,
-          player_id: w.player_id,
-          alliance: w.alliance,
-          score: w.score,
-          reason: w.reason,
-        });
-      }
+      // Bulk insert appointments
+      const appointmentsData = appointments.map(appt => ({
+        id: crypto.randomUUID(),
+        day: appt.day,
+        slot: appt.slot,
+        player_id: appt.player_id,
+        alliance: appt.alliance,
+        score: appt.score,
+      }));
+      await api.insertAppointmentsBulk(appointmentsData);
+
+      // Bulk insert waitlist
+      const waitlistData = waitlist.map(w => ({
+        id: crypto.randomUUID(),
+        day: w.day,
+        player_id: w.player_id,
+        alliance: w.alliance,
+        score: w.score,
+        reason: w.reason,
+      }));
+      await api.insertWaitlistBulk(waitlistData);
 
       return { scheduled: appointments.length, waitlisted: waitlist.length };
     },
@@ -331,35 +332,35 @@ export function useImportCsv() {
         created_at: new Date().toISOString(),
       });
 
-      for (const p of args.players) {
-        await api.upsertPlayer({
-          player_id: p.player_id,
-          name: p.name,
-          alliance: p.alliance,
-          updated_at: new Date().toISOString(),
-        });
-      }
+      // Bulk insert players
+      const playersData = args.players.map(p => ({
+        player_id: p.player_id,
+        name: p.name,
+        alliance: p.alliance,
+        updated_at: new Date().toISOString(),
+      }));
+      await api.insertPlayersBulk(playersData);
 
-      for (const s of args.submissions) {
-        await api.upsertSubmission({
-          player_id: s.player_id,
-          import_id: importId,
-          comment: s.comment,
-          requests_monday: s.requests_monday,
-          requests_tuesday: s.requests_tuesday,
-          requests_thursday: s.requests_thursday,
-          mon_hours: (s as unknown as { mon_hours: number[] }).mon_hours,
-          mon_normal_fc: s.mon_normal_fc,
-          mon_refined_fc: s.mon_refined_fc,
-          mon_speedup_days: s.mon_speedup_days,
-          tue_hours: (s as unknown as { tue_hours: number[] }).tue_hours,
-          tue_shards: s.tue_shards,
-          tue_speedup_days: s.tue_speedup_days,
-          thu_hours: (s as unknown as { thu_hours: number[] }).thu_hours,
-          thu_speedup_days: s.thu_speedup_days,
-          submitted_at: s.submitted_at,
-        });
-      }
+      // Bulk insert submissions
+      const submissionsData = args.submissions.map(s => ({
+        player_id: s.player_id,
+        import_id: importId,
+        comment: s.comment,
+        requests_monday: s.requests_monday,
+        requests_tuesday: s.requests_tuesday,
+        requests_thursday: s.requests_thursday,
+        mon_hours: (s as unknown as { mon_hours: number[] }).mon_hours,
+        mon_normal_fc: s.mon_normal_fc,
+        mon_refined_fc: s.mon_refined_fc,
+        mon_speedup_days: s.mon_speedup_days,
+        tue_hours: (s as unknown as { tue_hours: number[] }).tue_hours,
+        tue_shards: s.tue_shards,
+        tue_speedup_days: s.tue_speedup_days,
+        thu_hours: (s as unknown as { thu_hours: number[] }).thu_hours,
+        thu_speedup_days: s.thu_speedup_days,
+        submitted_at: s.submitted_at,
+      }));
+      await api.insertSubmissionsBulk(submissionsData);
 
       return importId;
     },
