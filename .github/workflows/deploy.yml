@@ -26,11 +26,8 @@ jobs:
 
       - name: Deploy to Fly.io
         uses: superfly/flyctl-actions/setup-flyctl@master
-        with:
-          flyctl-version: latest
 
       - name: Deploy API
-        run: |
-          flyctl deploy --app wos-svs-manager-api --config fly.toml
+        run: flyctl deploy --app wos-svs-manager-api --config fly.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
