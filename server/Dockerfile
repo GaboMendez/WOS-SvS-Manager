@@ -23,8 +23,8 @@ RUN mkdir -p /app/data
 
 # Copy built files
 COPY --from=builder /app/node_modules node_modules
-COPY --from=builder /app/package.json .
 COPY --from=builder /app/server ./server
+COPY --from=builder /app/package.json .
 
 # Expose port
 EXPOSE 3001
