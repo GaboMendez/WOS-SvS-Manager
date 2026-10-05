@@ -15,6 +15,9 @@ FROM oven/bun:1-alpine AS runner
 
 WORKDIR /app
 
+# Set environment for SQLite file storage
+ENV DOCKER=true
+
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 

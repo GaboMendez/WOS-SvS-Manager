@@ -30,9 +30,6 @@ function parseJson<T>(value: string | null | undefined): T | null {
   }
 }
 
-// Initialize on load
-initializeSchema().catch(console.error);
-
 // ============ PERIODS ============
 
 export function getPeriods() {
