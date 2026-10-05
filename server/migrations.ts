@@ -1,5 +1,5 @@
 import { createClient } from '@libsql/client';
-import { DB_PATH } from './path.js';
+import { DB_PATH, DB_AUTH_TOKEN } from './path.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -26,7 +26,11 @@ function getMigrations(): Migration[] {
 }
 
 export async function runMigrations() {
-  const db = createClient({ url: DB_PATH });
+  const dbConfig: Parameters<typeof createClient>[0] = { url: DB_PATH };
+  if (DB_AUTH_TOKEN) {
+    dbConfig.authToken = DB_AUTH_TOKEN;
+  }
+  const db = createClient(dbConfig);
 
   // Create migrations table if not exists
   await db.execute(`

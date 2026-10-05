@@ -1,10 +1,15 @@
 import { createClient } from '@libsql/client';
-import { DB_PATH } from './path.js';
+import { DB_PATH, DB_AUTH_TOKEN } from './path.js';
 import { runMigrations } from './migrations.js';
 
-const db = createClient({
-  url: DB_PATH
-});
+const dbConfig: Parameters<typeof createClient>[0] = { url: DB_PATH };
+
+// Add auth token for Turso remote database
+if (DB_AUTH_TOKEN) {
+  dbConfig.authToken = DB_AUTH_TOKEN;
+}
+
+const db = createClient(dbConfig);
 
 // Initialize settings row if not exists
 async function ensureSettings() {
