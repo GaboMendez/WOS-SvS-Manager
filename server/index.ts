@@ -30,6 +30,12 @@ async function getPeriodId(req: express.Request): Promise<string | null> {
   return (result.rows[0] as { id: string }).id;
 }
 
+// ============ HEALTH CHECK ============
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // ============ PERIODS ============
 
 app.get('/api/periods', handleError(async (_req, res) => {
