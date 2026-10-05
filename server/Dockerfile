@@ -18,9 +18,6 @@ WORKDIR /app
 # Set environment for SQLite file storage
 ENV DOCKER=true
 
-# Set default port for Railway
-ENV PORT=8080
-
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 
@@ -29,8 +26,8 @@ COPY --from=builder /app/node_modules node_modules
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/package.json .
 
-# Expose port (Railway uses PORT env var, default to 8080)
-EXPOSE 8080
+# Expose port
+EXPOSE 3001
 
 # Run the server
 CMD ["bun", "run", "server/index.ts"]
