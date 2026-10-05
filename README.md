@@ -133,22 +133,9 @@ VITE_API_URL=http://localhost:3001/api
 
 ### Deployment
 
-**Backend API**: Hosted on [Render](https://render.com) at `https://wos-svs-manager-api.onrender.com/api`
+**Backend API**: Self-hosted on Oracle Cloud (free forever)
 
-The backend uses a local SQLite database. For local development, you can run the API locally with Docker (see above) or connect to the production API.
-
-#### Deploying to Render
-
-1. Create a new Web Service on Render
-2. Connect your GitHub repository
-3. Set the following:
-   - **Root Directory**: leave empty (uses root `Dockerfile`)
-   - **Environment Variables**:
-     - `DOCKER` = `true`
-     - `PORT` = `3001`
-4. Click Create Web Service
-
-Every push to `main` will automatically deploy.
+See [DEPLOY_ORACLE.md](./DEPLOY_ORACLE.md) for step-by-step instructions to deploy on Oracle Cloud's always-free tier with persistent storage.
 
 ### Other scripts
 
