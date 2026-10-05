@@ -59,7 +59,6 @@ function PeriodsPage() {
 
   const periodList = periods.data ?? [];
   const closedPeriods = periodList.filter(p => p.is_closed);
-  const openPeriods = periodList.filter(p => !p.is_closed);
 
   return (
     <AppShell>
@@ -208,40 +207,6 @@ function PeriodsPage() {
           )}
         </div>
 
-        {/* Open Periods Section */}
-        {openPeriods.length > 0 && (
-          <div>
-            <h2 className="text-sm font-semibold mb-3">Other Open Periods</h2>
-            <div className="space-y-2">
-              {openPeriods.map(period => (
-                <div
-                  key={period.id}
-                  className="rounded-md ring-1 ring-line bg-panel px-4 py-3 flex items-center justify-between"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{period.name}</p>
-                    <p className="font-mono text-[11px] text-mut mt-0.5">
-                      {period.month}/{period.year} · Open
-                    </p>
-                  </div>
-                  {period.id !== currentPeriod.data?.id ? (
-                    <button
-                      onClick={() => {
-                        // Could implement switching current period here
-                        toast.info("Switch period functionality coming soon");
-                      }}
-                      className="text-xs font-medium px-3 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg"
-                    >
-                      Set Active
-                    </button>
-                  ) : (
-                    <span className="text-xs font-medium text-primary">Active</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
       <Outlet />
     </AppShell>
