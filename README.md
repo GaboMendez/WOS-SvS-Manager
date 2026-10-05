@@ -119,15 +119,9 @@ A dedicated page generates copy-paste-ready messages for each alliance's R4/R5 t
 ### Database
 
 - **Development**: Local SQLite at `data/wos-svs-manager.db`
-- **Production**: Local SQLite with Docker/Fly.io volume for data persistence
+- **Production**: Local SQLite (no persistence - data resets on each deploy)
 
-#### Running Locally with Docker
-
-```bash
-docker-compose up -d
-```
-
-The SQLite database is stored in the `data/` directory on the host and mounted into the container at `/app/data`.
+**Note**: The production database does not persist data between deploys. For production persistence, you would need to add a persistent disk or use an external database service.
 
 #### Environment Variables
 
@@ -139,9 +133,22 @@ VITE_API_URL=http://localhost:3001/api
 
 ### Deployment
 
-**Backend API**: Hosted on [Fly.io](https://fly.io) at `https://wos-svs-manager-api.fly.dev/api`
+**Backend API**: Hosted on [Render](https://render.com) at `https://wos-svs-manager-api.onrender.com/api`
 
-The backend uses a local SQLite database with persistent volume storage. For local development, you can run the API locally with Docker (see above) or connect to the production API.
+The backend uses a local SQLite database. For local development, you can run the API locally with Docker (see above) or connect to the production API.
+
+#### Deploying to Render
+
+1. Create a new Web Service on Render
+2. Connect your GitHub repository
+3. Set the following:
+   - **Root Directory**: leave empty (uses root `Dockerfile`)
+   - **Environment Variables**:
+     - `DOCKER` = `true`
+     - `PORT` = `3001`
+4. Click Create Web Service
+
+Every push to `main` will automatically deploy.
 
 ### Other scripts
 
