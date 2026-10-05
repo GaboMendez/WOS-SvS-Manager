@@ -33,7 +33,7 @@ async function getPeriodId(req: express.Request): Promise<string | null> {
 // ============ HEALTH CHECK ============
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).send('ok');
 });
 
 // ============ PERIODS ============
