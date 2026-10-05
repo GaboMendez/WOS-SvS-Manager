@@ -3,6 +3,17 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// In Docker, data is stored at /app/data/wos-svs-manager.db
-const dataDir = process.env.DOCKER ? '/app/data' : path.resolve(__dirname, '../data');
+// Data directory: Docker uses /app/data, Render uses /var/data (persistent disk)
+const dataDir = process.env.DOCKER
+  ? '/app/data'
+  : process.env.RENDER
+    ? '/var/data'
+    : path.resolve(__dirname, '../data');
+
+// Ensure directory exists (for non-Docker environments)
+import fs from 'fs';
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
 export const DB_PATH = `file:${path.join(dataDir, 'wos-svs-manager.db')}`;
