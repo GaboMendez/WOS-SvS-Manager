@@ -174,7 +174,7 @@ function HistoricalView() {
         {/* Header */}
         <div className="flex items-center gap-3">
           <Link to="/periods" className="text-sm text-mut hover:text-fg">
-            ← Back
+            × Close
           </Link>
           <h1 className="text-base font-semibold tracking-tight">{period.name}</h1>
           <span className="font-mono text-[11px] text-warn">READ ONLY</span>
