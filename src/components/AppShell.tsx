@@ -27,7 +27,7 @@ function PageLink({
   children,
   onClick,
 }: {
-  to: "/" | "/import" | "/players" | "/scoring" | "/messages";
+  to: "/" | "/import" | "/players" | "/scoring" | "/messages" | "/periods";
   active: boolean;
   children: ReactNode;
   onClick?: () => void;
@@ -108,6 +108,14 @@ export function AppShell({
           onClick={() => setMobileOpen(false)}
         >
           Scoring
+        </PageLink>
+        <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
+          History
+        </div>
+        <PageLink to="/periods" active={pathname === "/periods" || pathname.startsWith("/periods/")}
+          onClick={() => setMobileOpen(false)}
+        >
+          Periods
         </PageLink>
       </nav>
       <a

@@ -13,8 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BoardRouteImport } from './routes/board'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as PeriodsRouteImport } from './routes/periods'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as ScoringRouteImport } from './routes/scoring'
+import { Route as PeriodsPeriodIdRouteImport } from './routes/periods.$periodId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -36,6 +38,11 @@ const MessagesRoute = MessagesRouteImport.update({
   path: '/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PeriodsRoute = PeriodsRouteImport.update({
+  id: '/periods',
+  path: '/periods',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlayersRoute = PlayersRouteImport.update({
   id: '/players',
   path: '/players',
@@ -46,22 +53,31 @@ const ScoringRoute = ScoringRouteImport.update({
   path: '/scoring',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PeriodsPeriodIdRoute = PeriodsPeriodIdRouteImport.update({
+  id: '/$periodId',
+  path: '/$periodId',
+  getParentRoute: () => PeriodsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/board': typeof BoardRoute
   '/import': typeof ImportRoute
   '/messages': typeof MessagesRoute
+  '/periods': typeof PeriodsRouteWithChildren
   '/players': typeof PlayersRoute
   '/scoring': typeof ScoringRoute
+  '/periods/$periodId': typeof PeriodsPeriodIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/board': typeof BoardRoute
   '/import': typeof ImportRoute
   '/messages': typeof MessagesRoute
+  '/periods': typeof PeriodsRouteWithChildren
   '/players': typeof PlayersRoute
   '/scoring': typeof ScoringRoute
+  '/periods/$periodId': typeof PeriodsPeriodIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -69,22 +85,42 @@ export interface FileRoutesById {
   '/board': typeof BoardRoute
   '/import': typeof ImportRoute
   '/messages': typeof MessagesRoute
+  '/periods': typeof PeriodsRouteWithChildren
   '/players': typeof PlayersRoute
   '/scoring': typeof ScoringRoute
+  '/periods/$periodId': typeof PeriodsPeriodIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/board' | '/import' | '/messages' | '/players' | '/scoring'
+  fullPaths:
+    | '/'
+    | '/board'
+    | '/import'
+    | '/messages'
+    | '/periods'
+    | '/players'
+    | '/scoring'
+    | '/periods/$periodId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/board' | '/import' | '/messages' | '/players' | '/scoring'
+  to:
+    | '/'
+    | '/board'
+    | '/import'
+    | '/messages'
+    | '/periods'
+    | '/players'
+    | '/scoring'
+    | '/periods/$periodId'
   id:
     | '__root__'
     | '/'
     | '/board'
     | '/import'
     | '/messages'
+    | '/periods'
     | '/players'
     | '/scoring'
+    | '/periods/$periodId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -92,6 +128,7 @@ export interface RootRouteChildren {
   BoardRoute: typeof BoardRoute
   ImportRoute: typeof ImportRoute
   MessagesRoute: typeof MessagesRoute
+  PeriodsRoute: typeof PeriodsRouteWithChildren
   PlayersRoute: typeof PlayersRoute
   ScoringRoute: typeof ScoringRoute
 }
@@ -126,6 +163,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/periods': {
+      id: '/periods'
+      path: '/periods'
+      fullPath: '/periods'
+      preLoaderRoute: typeof PeriodsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/players': {
       id: '/players'
       path: '/players'
@@ -140,14 +184,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScoringRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/periods/$periodId': {
+      id: '/periods/$periodId'
+      path: '/$periodId'
+      fullPath: '/periods/$periodId'
+      preLoaderRoute: typeof PeriodsPeriodIdRouteImport
+      parentRoute: typeof PeriodsRoute
+    }
   }
 }
+
+interface PeriodsRouteChildren {
+  PeriodsPeriodIdRoute: typeof PeriodsPeriodIdRoute
+}
+
+const PeriodsRouteChildren: PeriodsRouteChildren = {
+  PeriodsPeriodIdRoute: PeriodsPeriodIdRoute,
+}
+
+const PeriodsRouteWithChildren =
+  PeriodsRoute._addFileChildren(PeriodsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BoardRoute: BoardRoute,
   ImportRoute: ImportRoute,
   MessagesRoute: MessagesRoute,
+  PeriodsRoute: PeriodsRouteWithChildren,
   PlayersRoute: PlayersRoute,
   ScoringRoute: ScoringRoute,
 }

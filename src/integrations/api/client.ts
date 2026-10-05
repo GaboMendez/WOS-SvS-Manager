@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE = import.meta.env['VITE_API_URL'] || 'http://localhost:3001/api';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -14,20 +14,52 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   return response.json();
 }
 
-// Players
-export const api = {
-  getPlayers: () => fetchJson<unknown[]>(`${API_BASE}/players`),
+// Helper to add period_id to URL if provided
+function buildUrl(endpoint: string, periodId?: string): string {
+  const base = `${API_BASE}${endpoint}`;
+  if (periodId) {
+    const separator = endpoint.includes('?') ? '&' : '?';
+    return `${base}${separator}period_id=${periodId}`;
+  }
+  return base;
+}
 
-  insertPlayersBulk: (players: { player_id: string; name: string; alliance: string; updated_at: string }[]) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/players/bulk`, {
+// Periods
+export interface Period {
+  id: string;
+  name: string;
+  month: number;
+  year: number;
+  is_closed: number;
+  created_at: string;
+  closed_at: string | null;
+}
+
+export const api = {
+  // Periods
+  getPeriods: () => fetchJson<Period[]>(`${API_BASE}/periods`),
+  getCurrentPeriod: () => fetchJson<Period | null>(`${API_BASE}/periods/current`),
+  createPeriod: (period: { name: string; month: number; year: number }) =>
+    fetchJson<{ success: boolean; id: string }>(`${API_BASE}/periods`, {
+      method: 'POST',
+      body: JSON.stringify(period),
+    }),
+  closePeriod: (id: string) =>
+    fetchJson<{ success: boolean }>(`${API_BASE}/periods/${id}/close`, { method: 'POST' }),
+
+  // Players
+  getPlayers: (periodId?: string) => fetchJson<unknown[]>(buildUrl('/players', periodId)),
+
+  insertPlayersBulk: (players: { player_id: string; name: string; alliance: string; updated_at: string }[], periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl('/players/bulk', periodId), {
       method: 'POST',
       body: JSON.stringify(players),
     }),
 
-  deleteAllPlayers: () => fetchJson<{ success: boolean }>(`${API_BASE}/players`, { method: 'DELETE' }),
+  deleteAllPlayers: (periodId?: string) => fetchJson<{ success: boolean }>(buildUrl('/players', periodId), { method: 'DELETE' }),
 
   // Submissions
-  getSubmissions: () => fetchJson<unknown[]>(`${API_BASE}/submissions`),
+  getSubmissions: (periodId?: string) => fetchJson<unknown[]>(buildUrl('/submissions', periodId)),
 
   insertSubmissionsBulk: (submissions: {
     player_id: string;
@@ -46,63 +78,63 @@ export const api = {
     thu_hours?: number[];
     thu_speedup_days?: number;
     submitted_at: string;
-  }[]) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/submissions/bulk`, {
+  }[], periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl('/submissions/bulk', periodId), {
       method: 'POST',
       body: JSON.stringify(submissions),
     }),
 
-  deleteAllSubmissions: () => fetchJson<{ success: boolean }>(`${API_BASE}/submissions`, { method: 'DELETE' }),
+  deleteAllSubmissions: (periodId?: string) => fetchJson<{ success: boolean }>(buildUrl('/submissions', periodId), { method: 'DELETE' }),
 
   // Appointments
-  getAppointments: () => fetchJson<unknown[]>(`${API_BASE}/appointments`),
+  getAppointments: (periodId?: string) => fetchJson<unknown[]>(buildUrl('/appointments', periodId)),
 
-  getAppointmentsByDay: (day: string) => fetchJson<unknown[]>(`${API_BASE}/appointments/${day}`),
+  getAppointmentsByDay: (day: string, periodId?: string) => fetchJson<unknown[]>(buildUrl(`/appointments/${day}`, periodId)),
 
-  insertAppointment: (appointment: { id: string; day: string; slot: string; player_id: string; alliance: string; score: number }) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/appointments`, {
+  insertAppointment: (appointment: { id: string; day: string; slot: string; player_id: string; alliance: string; score: number }, periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl('/appointments', periodId), {
       method: 'POST',
       body: JSON.stringify(appointment),
     }),
 
-  insertAppointmentsBulk: (appointments: { id: string; day: string; slot: string; player_id: string; alliance: string; score: number }[]) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/appointments/bulk`, {
+  insertAppointmentsBulk: (appointments: { id: string; day: string; slot: string; player_id: string; alliance: string; score: number }[], periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl('/appointments/bulk', periodId), {
       method: 'POST',
       body: JSON.stringify(appointments),
     }),
 
-  updateAppointment: (id: string, updates: { slot?: string; player_id?: string; alliance?: string; score?: number }) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/appointments/${id}`, {
+  updateAppointment: (id: string, updates: { slot?: string; player_id?: string; alliance?: string; score?: number }, periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl(`/appointments/${id}`, periodId), {
       method: 'PATCH',
       body: JSON.stringify(updates),
     }),
 
-  deleteAppointment: (id: string) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/appointments/${id}`, { method: 'DELETE' }),
+  deleteAppointment: (id: string, periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl(`/appointments/${id}`, periodId), { method: 'DELETE' }),
 
-  deleteAllAppointments: () => fetchJson<{ success: boolean }>(`${API_BASE}/appointments`, { method: 'DELETE' }),
+  deleteAllAppointments: (periodId?: string) => fetchJson<{ success: boolean }>(buildUrl('/appointments', periodId), { method: 'DELETE' }),
 
   // Waitlist
-  getWaitlist: () => fetchJson<unknown[]>(`${API_BASE}/waitlist`),
+  getWaitlist: (periodId?: string) => fetchJson<unknown[]>(buildUrl('/waitlist', periodId)),
 
-  getWaitlistByDay: (day: string) => fetchJson<unknown[]>(`${API_BASE}/waitlist/${day}`),
+  getWaitlistByDay: (day: string, periodId?: string) => fetchJson<unknown[]>(buildUrl(`/waitlist/${day}`, periodId)),
 
-  insertWaitlist: (entry: { id: string; day: string; player_id: string; alliance: string; score: number; reason?: string }) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/waitlist`, {
+  insertWaitlist: (entry: { id: string; day: string; player_id: string; alliance: string; score: number; reason?: string }, periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl('/waitlist', periodId), {
       method: 'POST',
       body: JSON.stringify(entry),
     }),
 
-  insertWaitlistBulk: (entries: { id: string; day: string; player_id: string; alliance: string; score: number; reason?: string }[]) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/waitlist/bulk`, {
+  insertWaitlistBulk: (entries: { id: string; day: string; player_id: string; alliance: string; score: number; reason?: string }[], periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl('/waitlist/bulk', periodId), {
       method: 'POST',
       body: JSON.stringify(entries),
     }),
 
-  deleteWaitlist: (id: string) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/waitlist/${id}`, { method: 'DELETE' }),
+  deleteWaitlist: (id: string, periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl(`/waitlist/${id}`, periodId), { method: 'DELETE' }),
 
-  deleteAllWaitlist: () => fetchJson<{ success: boolean }>(`${API_BASE}/waitlist`, { method: 'DELETE' }),
+  deleteAllWaitlist: (periodId?: string) => fetchJson<{ success: boolean }>(buildUrl('/waitlist', periodId), { method: 'DELETE' }),
 
   // Settings
   getSettings: () => fetchJson<{ weights: unknown; updated_at: string } | null>(`${API_BASE}/settings`),
@@ -114,16 +146,16 @@ export const api = {
     }),
 
   // Imports
-  getLatestImport: () => fetchJson<unknown | null>(`${API_BASE}/imports/latest`),
+  getLatestImport: (periodId?: string) => fetchJson<unknown | null>(buildUrl('/imports/latest', periodId)),
 
-  insertImport: (imp: { id: string; filename: string; raw_csv: string; row_count: number; created_at: string }) =>
-    fetchJson<{ success: boolean }>(`${API_BASE}/imports`, {
+  insertImport: (imp: { id: string; filename: string; raw_csv: string; row_count: number; created_at: string }, periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl('/imports', periodId), {
       method: 'POST',
       body: JSON.stringify(imp),
     }),
 
-  deleteAllImports: () => fetchJson<{ success: boolean }>(`${API_BASE}/imports`, { method: 'DELETE' }),
+  deleteAllImports: (periodId?: string) => fetchJson<{ success: boolean }>(buildUrl('/imports', periodId), { method: 'DELETE' }),
 
   // Clear all
-  wipeAll: () => fetchJson<{ success: boolean }>(`${API_BASE}/all`, { method: 'DELETE' }),
+  wipeAll: (periodId?: string) => fetchJson<{ success: boolean }>(buildUrl('/all', periodId), { method: 'DELETE' }),
 };

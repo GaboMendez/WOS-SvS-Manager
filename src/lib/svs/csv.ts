@@ -14,6 +14,22 @@ export type ParsedImport = {
 
 const yes = (v: string) => /^(y|yes|true|1)/i.test((v ?? "").trim());
 
+// Parse European date format (DD.MM.YYYY HH:MM:SS) and other common formats
+function parseTimestamp(ts: string): number {
+  // Try standard Date.parse first
+  let parsed = Date.parse(ts);
+  if (Number.isFinite(parsed)) return parsed;
+
+  // Try European format DD.MM.YYYY HH:MM:SS or DD.MM.YYYY
+  const euroMatch = ts.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (euroMatch) {
+    const [, day, month, year, hour = 0, minute = 0, second = 0] = euroMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)).getTime();
+  }
+
+  return NaN;
+}
+
 const num = (v: string): number => {
   const cleaned = (v ?? "").replace(/[^0-9.,-]/g, "").replace(/,/g, "");
   const n = Number.parseFloat(cleaned);
@@ -67,7 +83,7 @@ export function parseCsv(text: string): ParsedImport {
     if (!name) warnings.push({ row: rowNo, message: "Missing player name" });
 
     const ts = c(0);
-    const parsedTs = Date.parse(ts);
+    const parsedTs = parseTimestamp(ts);
     if (!Number.isFinite(parsedTs)) {
       warnings.push({ row: rowNo, message: `Unreadable timestamp "${ts}" — treated as oldest` });
     }

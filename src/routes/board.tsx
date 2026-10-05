@@ -60,6 +60,8 @@ function Dashboard() {
   const [selected, setSelected] = useState<string | null>(null);
   const [allianceFilter, setAllianceFilter] = useState("all");
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
+  const [searchName, setSearchName] = useState("");
+  const [sortBy, setSortBy] = useState<"slot" | "score" | "name">("slot");
 
 
   const appts = useMemo(
@@ -87,13 +89,44 @@ function Dashboard() {
     return [...set].sort();
   }, [appts, waitlist]);
 
-  const visibleSlots = useMemo(
-    () =>
-      allianceFilter === "all"
-        ? SLOTS
-        : SLOTS.filter((s) => (bySlot.get(s)?.alliance || "—") === allianceFilter && bySlot.get(s)),
-    [allianceFilter, bySlot],
-  );
+  const visibleSlots = useMemo(() => {
+    let slots = SLOTS;
+
+    // Filter by alliance
+    if (allianceFilter !== "all") {
+      slots = slots.filter((s) => (bySlot.get(s)?.alliance || "—") === allianceFilter && bySlot.get(s));
+    }
+
+    // Filter by name search
+    if (searchName) {
+      const search = searchName.toLowerCase();
+      slots = slots.filter((s) => {
+        const appt = bySlot.get(s);
+        if (!appt) return false;
+        const player = players[appt.player_id];
+        const name = player?.name?.toLowerCase() || "";
+        const id = appt.player_id.toLowerCase();
+        return name.includes(search) || id.includes(search);
+      });
+    }
+
+    // Sort
+    const sortedAppointments = [...slots]
+      .map(s => ({ slot: s, appt: bySlot.get(s) }))
+      .filter(({ appt }) => appt);
+
+    if (sortBy === "score") {
+      sortedAppointments.sort((a, b) => (b.appt?.score ?? 0) - (a.appt?.score ?? 0));
+    } else if (sortBy === "name") {
+      sortedAppointments.sort((a, b) => {
+        const nameA = players[a.appt?.player_id ?? ""]?.name?.toLowerCase() || "";
+        const nameB = players[b.appt?.player_id ?? ""]?.name?.toLowerCase() || "";
+        return nameA.localeCompare(nameB);
+      });
+    }
+
+    return sortBy === "slot" ? slots : sortedAppointments.map(({ slot }) => slot);
+  }, [allianceFilter, bySlot, searchName, sortBy, players]);
 
   /** Players that can be moved into a slot: everyone on this day's waitlist plus those already scheduled. */
   const movable = useMemo(() => {
@@ -214,14 +247,22 @@ function Dashboard() {
         </>
       }
     >
-      <div className="sticky top-0 z-20 bg-ink border-b border-line px-4 py-2.5 flex items-center gap-3">
+      {/* Desktop header (≥xl) */}
+      <div className="hidden xl:flex sticky top-0 z-20 items-center gap-3 bg-ink border-b border-line px-4 py-2.5">
         <div className="flex items-baseline gap-2">
           <h1 className="text-base font-semibold tracking-tight">
             {meta.label} · {meta.focus}
           </h1>
-          <span className="hidden sm:inline font-mono text-[11px] text-mut">UTC · 48 slots</span>
+          <span className="font-mono text-[11px] text-mut">UTC · 48 slots</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search name..."
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            className="w-32 text-xs bg-panel ring-1 ring-line rounded-md px-2 py-1.5 outline-none focus:ring-primary/60"
+          />
           <select
             value={allianceFilter}
             onChange={(e) => setAllianceFilter(e.target.value)}
@@ -233,6 +274,88 @@ function Dashboard() {
                 {tag}
               </option>
             ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "slot" | "score" | "name")}
+            className="text-xs bg-panel ring-1 ring-line rounded-md px-2 py-1.5 outline-none focus:ring-primary/60"
+          >
+            <option value="slot">Sort by slot</option>
+            <option value="score">Sort by score</option>
+            <option value="name">Sort by name</option>
+          </select>
+          <button
+            onClick={exportDay}
+            className="text-xs font-medium px-2.5 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg"
+          >
+            Export CSV
+          </button>
+          <button
+            title="Rebuilds all three days from scratch using the current sign-ups and scoring weights. Any manual slot changes are lost."
+            onClick={() => {
+              if (
+                !window.confirm(
+                  "Rebuild the schedule from the sign-ups and scoring weights? Any manual slot changes will be lost.",
+                )
+              )
+                return;
+              recompute.mutate(undefined, {
+                onSuccess: (r) =>
+                  toast.success(`${r.scheduled} appointments assigned, ${r.waitlisted} waitlisted`),
+                onError: (e) => toast.error(e.message),
+              });
+            }}
+            disabled={recompute.isPending}
+            className="text-xs font-medium px-2.5 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <span className="size-1.5 rounded-full bg-primary" />
+            {recompute.isPending ? "Rebuilding…" : "Auto-rebuild schedule"}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile/Tablet header (< xl) */}
+      <div className="xl:hidden sticky top-0 z-20 bg-ink border-b border-line">
+        {/* Title and stats row */}
+        <div className="px-4 py-2 flex items-baseline justify-between">
+          <h1 className="text-base font-semibold tracking-tight">
+            {meta.label} · {meta.focus}
+          </h1>
+          <div className="flex items-center gap-3 font-mono text-[10px] text-mut">
+            <span>{filled}/48</span>
+            <span className="text-ok">{Math.round((filled / 48) * 100)}%</span>
+            <span>{waitlist.length} waitlist</span>
+          </div>
+        </div>
+        {/* Filters row */}
+        <div className="px-4 pb-2 flex flex-wrap gap-2">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            className="w-24 text-xs bg-panel ring-1 ring-line rounded-md px-2 py-1.5 outline-none focus:ring-primary/60"
+          />
+          <select
+            value={allianceFilter}
+            onChange={(e) => setAllianceFilter(e.target.value)}
+            className="text-xs bg-panel ring-1 ring-line rounded-md px-2 py-1.5 outline-none focus:ring-primary/60"
+          >
+            <option value="all">All alliances</option>
+            {allianceOptions.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "slot" | "score" | "name")}
+            className="text-xs bg-panel ring-1 ring-line rounded-md px-2 py-1.5 outline-none focus:ring-primary/60"
+          >
+            <option value="slot">Slot</option>
+            <option value="score">Score</option>
+            <option value="name">Name</option>
           </select>
           <button
             onClick={exportDay}
@@ -322,7 +445,7 @@ function Dashboard() {
                       <>
                         <td
                           onClick={() => setSelected(a.player_id)}
-                          className="px-3 py-2 font-sans font-medium cursor-pointer"
+                          className="px-3 py-2 font-sans font-medium text-primary cursor-pointer hover:underline"
                         >
                           {players[a.player_id]?.name ?? a.player_id}
                         </td>

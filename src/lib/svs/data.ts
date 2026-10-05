@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/integrations/api/client";
+import { api, type Period } from "@/integrations/api/client";
 import { scheduleDay } from "./schedule";
 import {
   DAYS,
@@ -61,12 +61,69 @@ export function useAllianceLookup(): (tag: string) => { color: string } {
   }, [order]);
 }
 
-export function useRoster() {
+// ============ PERIODS ============
+
+export function usePeriods() {
   return useQuery({
-    queryKey: ["roster"],
+    queryKey: ["periods"],
     queryFn: async () => {
-      const players = await api.getPlayers();
-      const submissions = await api.getSubmissions();
+      const data = await api.getPeriods();
+      return data as Period[];
+    },
+  });
+}
+
+export function useCurrentPeriod() {
+  return useQuery({
+    queryKey: ["currentPeriod"],
+    queryFn: async () => {
+      const data = await api.getCurrentPeriod();
+      return data as Period | null;
+    },
+    staleTime: 0,
+  });
+}
+
+export function useCreatePeriod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (period: { name: string; month: number; year: number }) => {
+      const result = await api.createPeriod(period);
+      return result;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["periods"] });
+      qc.invalidateQueries({ queryKey: ["currentPeriod"] });
+    },
+  });
+}
+
+export function useClosePeriod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (periodId: string) => {
+      await api.closePeriod(periodId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["periods"] });
+      qc.invalidateQueries({ queryKey: ["currentPeriod"] });
+    },
+  });
+}
+
+// ============ ROSTER & SCHEDULE ============
+
+export function useRoster() {
+  const currentPeriod = useCurrentPeriod();
+  const periodId = currentPeriod.data?.id;
+
+  return useQuery({
+    queryKey: ["roster", periodId],
+    queryFn: async () => {
+      if (!periodId) return { players: [], playersById: {}, submissions: [] };
+
+      const players = await api.getPlayers(periodId);
+      const submissions = await api.getSubmissions(periodId);
 
       // Parse hours arrays from JSON strings and convert 0/1 to booleans
       const parsedSubmissions = (submissions ?? []).map((s: Record<string, unknown>) => ({
@@ -88,23 +145,67 @@ export function useRoster() {
         submissions: parsedSubmissions as unknown as Submission[],
       };
     },
+    enabled: !!periodId,
   });
 }
 
 export function useSchedule() {
+  const currentPeriod = useCurrentPeriod();
+  const periodId = currentPeriod.data?.id;
+
   return useQuery({
-    queryKey: ["schedule"],
+    queryKey: ["schedule", periodId],
     queryFn: async () => {
-      const appts = await api.getAppointments();
-      const wl = await api.getWaitlist();
+      if (!periodId) return { appointments: [], waitlist: [] };
+
+      const appts = await api.getAppointments(periodId);
+      const wl = await api.getWaitlist(periodId);
 
       return {
         appointments: (appts ?? []) as unknown as Appointment[],
         waitlist: (wl ?? []) as unknown as WaitlistEntry[],
       };
     },
+    enabled: !!periodId,
   });
 }
+
+// ============ HISTORICAL DATA (READ-ONLY) ============
+
+export function useHistoricalData(periodId: string) {
+  return useQuery({
+    queryKey: ["historical", periodId],
+    queryFn: async () => {
+      const players = await api.getPlayers(periodId);
+      const submissions = await api.getSubmissions(periodId);
+      const appointments = await api.getAppointments(periodId);
+      const waitlist = await api.getWaitlist(periodId);
+
+      const parsedSubmissions = (submissions ?? []).map((s: Record<string, unknown>) => ({
+        ...s,
+        requests_monday: Boolean(s.requests_monday),
+        requests_tuesday: Boolean(s.requests_tuesday),
+        requests_thursday: Boolean(s.requests_thursday),
+        mon_hours: typeof s.mon_hours === 'string' ? JSON.parse(s.mon_hours as string) : s.mon_hours,
+        tue_hours: typeof s.tue_hours === 'string' ? JSON.parse(s.tue_hours as string) : s.tue_hours,
+        thu_hours: typeof s.thu_hours === 'string' ? JSON.parse(s.thu_hours as string) : s.thu_hours,
+      }));
+
+      const byId: Record<string, Player> = {};
+      for (const p of (players ?? []) as Player[]) byId[p.player_id] = p;
+
+      return {
+        players: (players ?? []) as Player[],
+        playersById: byId,
+        submissions: parsedSubmissions as unknown as Submission[],
+        appointments: (appointments ?? []) as unknown as Appointment[],
+        waitlist: (waitlist ?? []) as unknown as WaitlistEntry[],
+      };
+    },
+  });
+}
+
+// ============ SETTINGS ============
 
 export function useWeights() {
   return useQuery({
@@ -131,12 +232,19 @@ export function useSaveWeights() {
   });
 }
 
+// ============ RECOMPUTE ============
+
 export function useRecompute() {
   const qc = useQueryClient();
+  const currentPeriod = useCurrentPeriod();
+
   return useMutation({
     mutationFn: async () => {
-      const players = await api.getPlayers();
-      const subsRaw = await api.getSubmissions();
+      const periodId = currentPeriod.data?.id;
+      if (!periodId) throw new Error("No active period");
+
+      const players = await api.getPlayers(periodId);
+      const subsRaw = await api.getSubmissions(periodId);
       const settings = await api.getSettings();
 
       // Parse hours arrays from JSON strings and convert 0/1 to booleans
@@ -170,8 +278,8 @@ export function useRecompute() {
         waitlist.push(...res.waitlist);
       }
 
-      await api.deleteAllAppointments();
-      await api.deleteAllWaitlist();
+      await api.deleteAllAppointments(periodId);
+      await api.deleteAllWaitlist(periodId);
 
       // Bulk insert appointments
       const appointmentsData = appointments.map(appt => ({
@@ -182,7 +290,7 @@ export function useRecompute() {
         alliance: appt.alliance,
         score: appt.score,
       }));
-      await api.insertAppointmentsBulk(appointmentsData);
+      await api.insertAppointmentsBulk(appointmentsData, periodId);
 
       // Bulk insert waitlist
       const waitlistData = waitlist.map(w => ({
@@ -193,40 +301,61 @@ export function useRecompute() {
         score: w.score,
         reason: w.reason,
       }));
-      await api.insertWaitlistBulk(waitlistData);
+      await api.insertWaitlistBulk(waitlistData, periodId);
 
       return { scheduled: appointments.length, waitlisted: waitlist.length };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["schedule"] }),
+    onSuccess: () => {
+      const periodId = currentPeriod.data?.id;
+      if (periodId) {
+        qc.invalidateQueries({ queryKey: ["schedule", periodId] });
+      }
+    },
   });
 }
 
-async function wipeAll() {
-  await api.deleteAllAppointments();
-  await api.deleteAllWaitlist();
-  await api.deleteAllSubmissions();
-  await api.deleteAllPlayers();
-  await api.deleteAllImports();
+// ============ CLEAR ALL ============
+
+async function wipeAll(periodId: string) {
+  await api.deleteAllAppointments(periodId);
+  await api.deleteAllWaitlist(periodId);
+  await api.deleteAllSubmissions(periodId);
+  await api.deleteAllPlayers(periodId);
+  await api.deleteAllImports(periodId);
 }
 
 export function useClearAll() {
   const qc = useQueryClient();
+  const currentPeriod = useCurrentPeriod();
+
   return useMutation({
-    mutationFn: wipeAll,
+    mutationFn: async () => {
+      const periodId = currentPeriod.data?.id;
+      if (!periodId) throw new Error("No active period");
+      await wipeAll(periodId);
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["roster"] });
-      qc.invalidateQueries({ queryKey: ["schedule"] });
-      qc.invalidateQueries({ queryKey: ["latestImport"] });
+      const periodId = currentPeriod.data?.id;
+      if (periodId) {
+        qc.invalidateQueries({ queryKey: ["roster", periodId] });
+        qc.invalidateQueries({ queryKey: ["schedule", periodId] });
+        qc.invalidateQueries({ queryKey: ["latestImport", periodId] });
+      }
     },
   });
 }
 
-/** Most recent CSV import, so "view collected responses" can offer it back for download. */
+// ============ LATEST IMPORT ============
+
 export function useLatestImport() {
+  const currentPeriod = useCurrentPeriod();
+  const periodId = currentPeriod.data?.id;
+
   return useQuery({
-    queryKey: ["latestImport"],
+    queryKey: ["latestImport", periodId],
     queryFn: async () => {
-      const data = await api.getLatestImport();
+      if (!periodId) return null;
+      const data = await api.getLatestImport(periodId);
       return data as {
         filename: string;
         raw_csv: string;
@@ -234,17 +363,24 @@ export function useLatestImport() {
         created_at: string;
       } | null;
     },
+    enabled: !!periodId,
   });
 }
 
-/** Manually place a player into a slot (swap, promote from waitlist, or clear). */
+// ============ SET SLOT ============
+
 export function useSetSlot() {
   const qc = useQueryClient();
+  const currentPeriod = useCurrentPeriod();
+
   return useMutation({
     mutationFn: async (args: { day: DayKey; slot: string; playerId: string | null }) => {
+      const periodId = currentPeriod.data?.id;
+      if (!periodId) throw new Error("No active period");
+
       const { day, slot, playerId } = args;
-      const apptRows = await api.getAppointmentsByDay(day);
-      const wlRows = await api.getWaitlistByDay(day);
+      const apptRows = await api.getAppointmentsByDay(day, periodId);
+      const wlRows = await api.getWaitlistByDay(day, periodId);
 
       const appts = (apptRows ?? []) as unknown as (Appointment & { id: string })[];
       const wl = (wlRows ?? []) as unknown as (WaitlistEntry & { id: string })[];
@@ -252,7 +388,7 @@ export function useSetSlot() {
 
       if (!playerId) {
         if (!occupant) return;
-        await api.deleteAppointment(occupant.id);
+        await api.deleteAppointment(occupant.id, periodId);
         await api.insertWaitlist({
           id: crypto.randomUUID(),
           day,
@@ -260,7 +396,7 @@ export function useSetSlot() {
           alliance: occupant.alliance,
           score: occupant.score,
           reason: "removed manually",
-        });
+        }, periodId);
         return;
       }
 
@@ -271,24 +407,24 @@ export function useSetSlot() {
           // (day, slot) is unique, so park the occupant on a scratch slot first to avoid
           // colliding with the source's target slot while both updates are in flight.
           const tempSlot = `__swap_${occupant.id}`;
-          await api.updateAppointment(occupant.id, { slot: tempSlot });
-          await api.updateAppointment(source.id, { slot });
-          await api.updateAppointment(occupant.id, { slot: source.slot });
+          await api.updateAppointment(occupant.id, { slot: tempSlot }, periodId);
+          await api.updateAppointment(source.id, { slot }, periodId);
+          await api.updateAppointment(occupant.id, { slot: source.slot }, periodId);
         } else {
-          await api.updateAppointment(source.id, { slot });
+          await api.updateAppointment(source.id, { slot }, periodId);
         }
         return;
       }
 
       const entry = wl.find((w) => w.player_id === playerId);
       if (!entry) return;
-      await api.deleteWaitlist(entry.id);
+      await api.deleteWaitlist(entry.id, periodId);
       if (occupant) {
         await api.updateAppointment(occupant.id, {
           player_id: entry.player_id,
           alliance: entry.alliance,
           score: entry.score
-        });
+        }, periodId);
         await api.insertWaitlist({
           id: crypto.randomUUID(),
           day,
@@ -296,7 +432,7 @@ export function useSetSlot() {
           alliance: occupant.alliance,
           score: occupant.score,
           reason: "replaced manually",
-        });
+        }, periodId);
       } else {
         await api.insertAppointment({
           id: crypto.randomUUID(),
@@ -305,15 +441,24 @@ export function useSetSlot() {
           player_id: entry.player_id,
           alliance: entry.alliance,
           score: entry.score,
-        });
+        }, periodId);
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["schedule"] }),
+    onSuccess: () => {
+      const periodId = currentPeriod.data?.id;
+      if (periodId) {
+        qc.invalidateQueries({ queryKey: ["schedule", periodId] });
+      }
+    },
   });
 }
 
+// ============ IMPORT CSV ============
+
 export function useImportCsv() {
   const qc = useQueryClient();
+  const currentPeriod = useCurrentPeriod();
+
   return useMutation({
     mutationFn: async (args: {
       filename: string;
@@ -321,7 +466,10 @@ export function useImportCsv() {
       players: Player[];
       submissions: Submission[];
     }) => {
-      await wipeAll();
+      const periodId = currentPeriod.data?.id;
+      if (!periodId) throw new Error("No active period");
+
+      await wipeAll(periodId);
 
       const importId = crypto.randomUUID();
       await api.insertImport({
@@ -330,7 +478,7 @@ export function useImportCsv() {
         raw_csv: args.raw,
         row_count: args.submissions.length,
         created_at: new Date().toISOString(),
-      });
+      }, periodId);
 
       // Bulk insert players
       const playersData = args.players.map(p => ({
@@ -339,7 +487,7 @@ export function useImportCsv() {
         alliance: p.alliance,
         updated_at: new Date().toISOString(),
       }));
-      await api.insertPlayersBulk(playersData);
+      await api.insertPlayersBulk(playersData, periodId);
 
       // Bulk insert submissions
       const submissionsData = args.submissions.map(s => ({
@@ -360,14 +508,17 @@ export function useImportCsv() {
         thu_speedup_days: s.thu_speedup_days,
         submitted_at: s.submitted_at,
       }));
-      await api.insertSubmissionsBulk(submissionsData);
+      await api.insertSubmissionsBulk(submissionsData, periodId);
 
       return importId;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["roster"] });
-      qc.invalidateQueries({ queryKey: ["schedule"] });
-      qc.invalidateQueries({ queryKey: ["latestImport"] });
+      const periodId = currentPeriod.data?.id;
+      if (periodId) {
+        qc.invalidateQueries({ queryKey: ["roster", periodId] });
+        qc.invalidateQueries({ queryKey: ["schedule", periodId] });
+        qc.invalidateQueries({ queryKey: ["latestImport", periodId] });
+      }
     },
   });
 }

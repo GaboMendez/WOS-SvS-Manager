@@ -31,23 +31,65 @@ function PlayersPage() {
   const allianceLookup = useAllianceLookup();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [allianceFilter, setAllianceFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"name" | "mon" | "tue" | "thu">("name");
   const clearAll = useClearAll();
 
+  // Get unique alliances
+  const allAlliances = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of roster.data?.players ?? []) {
+      if (p.alliance) set.add(p.alliance);
+    }
+    return [...set].sort();
+  }, [roster.data]);
 
   const subs = useMemo(
     () => new Map((roster.data?.submissions ?? []).map((s) => [s.player_id, s])),
     [roster.data],
   );
+
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return (roster.data?.players ?? []).filter(
+    let result = (roster.data?.players ?? []).filter(
       (p) =>
         !term ||
         p.name.toLowerCase().includes(term) ||
         p.player_id.toLowerCase().includes(term) ||
         p.alliance.toLowerCase().includes(term),
     );
-  }, [roster.data, q]);
+
+    // Filter by alliance
+    if (allianceFilter !== "all") {
+      result = result.filter(p => p.alliance === allianceFilter);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      const sA = subs.get(a.player_id);
+      const sB = subs.get(b.player_id);
+      const w = weights.data;
+
+      if (sortBy === "name") {
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+      } else if (sortBy === "mon") {
+        const scoreA = sA && w && sA.requests_monday ? scoreFor("monday", sA, w) : 0;
+        const scoreB = sB && w && sB.requests_monday ? scoreFor("monday", sB, w) : 0;
+        return scoreB - scoreA;
+      } else if (sortBy === "tue") {
+        const scoreA = sA && w && sA.requests_tuesday ? scoreFor("tuesday", sA, w) : 0;
+        const scoreB = sB && w && sB.requests_tuesday ? scoreFor("tuesday", sB, w) : 0;
+        return scoreB - scoreA;
+      } else if (sortBy === "thu") {
+        const scoreA = sA && w && sA.requests_thursday ? scoreFor("thursday", sA, w) : 0;
+        const scoreB = sB && w && sB.requests_thursday ? scoreFor("thursday", sB, w) : 0;
+        return scoreB - scoreA;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [roster.data, q, allianceFilter, sortBy, subs, weights.data]);
 
   return (
     <AppShell>
@@ -57,8 +99,28 @@ function PlayersPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search name, ID or alliance"
-          className="ml-auto w-56 bg-panel ring-1 ring-line rounded-md px-2.5 py-1.5 text-xs outline-none focus:ring-primary/60"
+          className="w-48 bg-panel ring-1 ring-line rounded-md px-2.5 py-1.5 text-xs outline-none focus:ring-primary/60"
         />
+        <select
+          value={allianceFilter}
+          onChange={(e) => setAllianceFilter(e.target.value)}
+          className="bg-panel ring-1 ring-line rounded-md px-2.5 py-1.5 text-xs outline-none focus:ring-primary/60"
+        >
+          <option value="all">All alliances</option>
+          {allAlliances.map(tag => (
+            <option key={tag} value={tag}>{tag}</option>
+          ))}
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as "name" | "mon" | "tue" | "thu")}
+          className="bg-panel ring-1 ring-line rounded-md px-2.5 py-1.5 text-xs outline-none focus:ring-primary/60"
+        >
+          <option value="name">Sort by name</option>
+          <option value="mon">Sort by Mon score</option>
+          <option value="tue">Sort by Tue score</option>
+          <option value="thu">Sort by Thu score</option>
+        </select>
         <button
           onClick={() => {
             if (
@@ -100,10 +162,12 @@ function PlayersPage() {
                 return (
                   <tr
                     key={p.player_id}
-                    onClick={() => setSelected(p.player_id)}
-                    className="border-b border-line last:border-0 hover:bg-panel2 cursor-pointer transition-colors"
+                    className="border-b border-line last:border-0 hover:bg-panel2 transition-colors"
                   >
-                    <td className="px-3 py-2 font-sans font-medium">{p.name}</td>
+                    <td
+                      className="px-3 py-2 font-sans font-medium text-primary cursor-pointer hover:underline"
+                      onClick={() => setSelected(p.player_id)}
+                    >{p.name}</td>
                     <td className="px-3 py-2 text-mut">{p.player_id}</td>
                     <td className="px-3 py-2">
                       <span className="inline-flex items-center gap-1.5">

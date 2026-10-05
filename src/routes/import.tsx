@@ -1,11 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Download, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { downloadCsv, parseCsv, parseCsvRows, type ParsedImport } from "@/lib/svs/csv";
-import { useImportCsv, useLatestImport, useRecompute } from "@/lib/svs/data";
+import { useCurrentPeriod, useImportCsv, useLatestImport, useRecompute } from "@/lib/svs/data";
 
 export const Route = createFileRoute("/import")({
   head: () => ({
@@ -35,7 +35,9 @@ function ImportPage() {
   const importCsv = useImportCsv();
   const recompute = useRecompute();
   const latestImport = useLatestImport();
+  const currentPeriod = useCurrentPeriod();
   const navigate = useNavigate();
+  const hasPeriod = currentPeriod.data !== null && currentPeriod.data !== undefined;
   const csvRows = useMemo(
     () => (latestImport.data ? parseCsvRows(latestImport.data.raw_csv) : []),
     [latestImport.data],
@@ -103,7 +105,22 @@ function ImportPage() {
       </div>
 
       <div className="px-4 py-4 max-w-3xl space-y-4">
-        {latestImport.data ? (
+        {!hasPeriod && !currentPeriod.isLoading && (
+          <div className="rounded-md ring-1 ring-warn bg-panel px-4 py-6 text-center">
+            <p className="text-sm font-medium text-warn">No active period</p>
+            <p className="font-mono text-[11px] text-mut mt-1">
+              Create a period first to start importing data.
+            </p>
+            <Link
+              to="/periods"
+              className="inline-block mt-3 text-xs font-medium px-3 py-1.5 rounded-md bg-primary text-primary-foreground"
+            >
+              Go to Periods
+            </Link>
+          </div>
+        )}
+
+        {hasPeriod && latestImport.data ? (
           <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3 flex flex-wrap items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">📊 View Collected Responses</p>
@@ -134,77 +151,81 @@ function ImportPage() {
           </div>
         ) : null}
 
-        <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3 flex flex-wrap items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">
-              📂 First time? Download sample SvS data to try it out
-            </p>
-            <p className="font-mono text-[11px] text-mut mt-0.5">
-              Download the sample CSV, then drag it into the upload zone
-            </p>
-          </div>
-          <a
-            href="/sample-signup.csv"
-            download
-            className="text-xs font-medium px-3 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg whitespace-nowrap inline-flex items-center gap-1.5"
-          >
-            <Download className="size-3.5" />
-            Download sample CSV
-          </a>
-        </div>
+        {hasPeriod && (
+          <>
+            <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3 flex flex-wrap items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">
+                  📂 First time? Download sample SvS data to try it out
+                </p>
+                <p className="font-mono text-[11px] text-mut mt-0.5">
+                  Download the sample CSV, then drag it into the upload zone
+                </p>
+              </div>
+              <a
+                href="/sample-signup.csv"
+                download
+                className="text-xs font-medium px-3 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg whitespace-nowrap inline-flex items-center gap-1.5"
+              >
+                <Download className="size-3.5" />
+                Download sample CSV
+              </a>
+            </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
-            <p className="text-sm font-semibold tracking-tight">How it works</p>
-            <ul className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-disc list-inside">
-              <li>
-                Only the latest submission per Player ID is kept — older duplicates are dropped.
-              </li>
-              <li>
-                Each player gets a priority score for the day based on what they submitted (fire
-                crystals, rfc, fc shards, speedups, etc.), weighted using the settings on the
-                Scoring page.
-              </li>
-              <li>
-                Players with higher scores get seated first. If their preferred time is taken by
-                someone with a lower score, that person is moved to another time they also said
-                works for them — so nobody loses their spot, they just might get a different one of
-                their own preferred hours. Only if there's truly no open time left among a player's
-                choices do they end up on the waitlist.
-              </li>
-              <li>
-                Re-importing replaces all data; you can still adjust slots manually afterward.
-              </li>
-            </ul>
-          </div>
-          <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
-            <p className="text-sm font-semibold tracking-tight">How to use</p>
-            <ol className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-decimal list-inside">
-              <li>
-                Export the "Formularantworten 1" sheet as a .csv from the Excel "Kopie von SVS Prep
-                Signup Template (Antworten)" file <br></br>(File → Download → .csv).
-              </li>
-              <li>Choose that file in the upload zone below.</li>
-              <li>Review the parse summary and any validation warnings.</li>
-              <li>Click "Save import and build schedule" to store it and auto-assign slots.</li>
-            </ol>
-          </div>
-        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
+                <p className="text-sm font-semibold tracking-tight">How it works</p>
+                <ul className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-disc list-inside">
+                  <li>
+                    Only the latest submission per Player ID is kept — older duplicates are dropped.
+                  </li>
+                  <li>
+                    Each player gets a priority score for the day based on what they submitted (fire
+                    crystals, rfc, fc shards, speedups, etc.), weighted using the settings on the
+                    Scoring page.
+                  </li>
+                  <li>
+                    Players with higher scores get seated first. If their preferred time is taken by
+                    someone with a lower score, that person is moved to another time they also said
+                    works for them — so nobody loses their spot, they just might get a different one of
+                    their own preferred hours. Only if there's truly no open time left among a player's
+                    choices do they end up on the waitlist.
+                  </li>
+                  <li>
+                    Re-importing replaces all data; you can still adjust slots manually afterward.
+                  </li>
+                </ul>
+              </div>
+              <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3">
+                <p className="text-sm font-semibold tracking-tight">How to use</p>
+                <ol className="mt-2 space-y-1.5 font-mono text-[11px] text-mut list-decimal list-inside">
+                  <li>
+                    Export the "Formularantworten 1" sheet as a .csv from the Excel "Kopie von SVS Prep
+                    Signup Template (Antworten)" file <br></br>(File → Download → .csv).
+                  </li>
+                  <li>Choose that file in the upload zone below.</li>
+                  <li>Review the parse summary and any validation warnings.</li>
+                  <li>Click "Save import and build schedule" to store it and auto-assign slots.</li>
+                </ol>
+              </div>
+            </div>
 
-        <label className="block rounded-md ring-1 ring-line bg-panel px-4 py-8 text-center cursor-pointer hover:ring-primary/50 transition-colors">
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
-          />
-          <p className="text-sm font-medium">Choose a CSV file</p>
-          <p className="font-mono text-[11px] text-mut mt-1">
-            Latest submission per player ID is kept · times read as UTC hours
-          </p>
-        </label>
+            <label className="block rounded-md ring-1 ring-line bg-panel px-4 py-8 text-center cursor-pointer hover:ring-primary/50 transition-colors">
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+              />
+              <p className="text-sm font-medium">Choose a CSV file</p>
+              <p className="font-mono text-[11px] text-mut mt-1">
+                Latest submission per player ID is kept · times read as UTC hours
+              </p>
+            </label>
+          </>
+        )}
 
-        {parsed ? (
+        {hasPeriod && parsed ? (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[

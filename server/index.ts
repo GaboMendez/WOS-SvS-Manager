@@ -9,7 +9,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 3001;
 
 // Error handler middleware
-const handleError = (fn: Function) => async (req: express.Request, res: express.Response) => {
+const handleError = (fn: (req: express.Request, res: express.Response) => Promise<void>) => async (req: express.Request, res: express.Response) => {
   try {
     await fn(req, res);
   } catch (err) {
@@ -18,106 +18,185 @@ const handleError = (fn: Function) => async (req: express.Request, res: express.
   }
 };
 
-// Players
-app.get('/api/players', handleError(async (_req, res) => {
-  const result = await db.getPlayers();
+// Get current period ID from request or database
+async function getPeriodId(req: express.Request): Promise<string | null> {
+  // Check if period_id is provided in query
+  const queryPeriodId = req.query.period_id as string | undefined;
+  if (queryPeriodId) return queryPeriodId;
+
+  // Get current period
+  const result = await db.getCurrentPeriod();
+  if (result.rows.length === 0) return null;
+  return (result.rows[0] as { id: string }).id;
+}
+
+// ============ PERIODS ============
+
+app.get('/api/periods', handleError(async (_req, res) => {
+  const result = await db.getPeriods();
+  res.json(result.rows);
+}));
+
+app.get('/api/periods/current', handleError(async (_req, res) => {
+  const result = await db.getCurrentPeriod();
+  res.json(result.rows[0] || null);
+}));
+
+app.post('/api/periods', handleError(async (req, res) => {
+  const { name, month, year } = req.body;
+  const id = crypto.randomUUID();
+  await db.createPeriod({ id, name, month, year });
+  res.json({ success: true, id });
+}));
+
+app.post('/api/periods/:id/close', handleError(async (req, res) => {
+  await db.closePeriod(req.params.id);
+  res.json({ success: true });
+}));
+
+// ============ PLAYERS ============
+
+app.get('/api/players', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json([]); return; }
+  const result = await db.getPlayers(periodId);
   res.json(result.rows);
 }));
 
 app.post('/api/players/bulk', handleError(async (req, res) => {
-  await db.insertPlayersBulk(req.body);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.insertPlayersBulk(periodId, req.body);
   res.json({ success: true });
 }));
 
-app.delete('/api/players', handleError(async (_req, res) => {
-  await db.deleteAllPlayers();
+app.delete('/api/players', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json({ success: true }); return; }
+  await db.deleteAllPlayers(periodId);
   res.json({ success: true });
 }));
 
-// Submissions
-app.get('/api/submissions', handleError(async (_req, res) => {
-  const result = await db.getSubmissions();
+// ============ SUBMISSIONS ============
+
+app.get('/api/submissions', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json([]); return; }
+  const result = await db.getSubmissions(periodId);
   res.json(result.rows);
 }));
 
 app.post('/api/submissions/bulk', handleError(async (req, res) => {
-  await db.insertSubmissionsBulk(req.body);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.insertSubmissionsBulk(periodId, req.body);
   res.json({ success: true });
 }));
 
-app.delete('/api/submissions', handleError(async (_req, res) => {
-  await db.deleteAllSubmissions();
+app.delete('/api/submissions', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json({ success: true }); return; }
+  await db.deleteAllSubmissions(periodId);
   res.json({ success: true });
 }));
 
-// Appointments
-app.get('/api/appointments', handleError(async (_req, res) => {
-  const result = await db.getAppointments();
+// ============ APPOINTMENTS ============
+
+app.get('/api/appointments', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json([]); return; }
+  const result = await db.getAppointments(periodId);
   res.json(result.rows);
 }));
 
 app.get('/api/appointments/:day', handleError(async (req, res) => {
-  const result = await db.getAppointmentsByDay(req.params.day);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json([]); return; }
+  const result = await db.getAppointmentsByDay(periodId, req.params.day);
   res.json(result.rows);
 }));
 
 app.post('/api/appointments', handleError(async (req, res) => {
-  await db.insertAppointment(req.body);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.insertAppointment(periodId, req.body);
   res.json({ success: true });
 }));
 
 app.post('/api/appointments/bulk', handleError(async (req, res) => {
-  await db.insertAppointmentsBulk(req.body);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.insertAppointmentsBulk(periodId, req.body);
   res.json({ success: true });
 }));
 
 app.patch('/api/appointments/:id', handleError(async (req, res) => {
-  await db.updateAppointment(req.params.id, req.body);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.updateAppointment(periodId, req.params.id, req.body);
   res.json({ success: true });
 }));
 
 app.delete('/api/appointments/:id', handleError(async (req, res) => {
-  await db.deleteAppointment(req.params.id);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.deleteAppointment(periodId, req.params.id);
   res.json({ success: true });
 }));
 
-app.delete('/api/appointments', handleError(async (_req, res) => {
-  await db.deleteAllAppointments();
+app.delete('/api/appointments', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json({ success: true }); return; }
+  await db.deleteAllAppointments(periodId);
   res.json({ success: true });
 }));
 
-// Waitlist
-app.get('/api/waitlist', handleError(async (_req, res) => {
-  const result = await db.getWaitlist();
+// ============ WAITLIST ============
+
+app.get('/api/waitlist', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json([]); return; }
+  const result = await db.getWaitlist(periodId);
   res.json(result.rows);
 }));
 
 app.get('/api/waitlist/:day', handleError(async (req, res) => {
-  const result = await db.getWaitlistByDay(req.params.day);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json([]); return; }
+  const result = await db.getWaitlistByDay(periodId, req.params.day);
   res.json(result.rows);
 }));
 
 app.post('/api/waitlist', handleError(async (req, res) => {
-  await db.insertWaitlist(req.body);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.insertWaitlist(periodId, req.body);
   res.json({ success: true });
 }));
 
 app.post('/api/waitlist/bulk', handleError(async (req, res) => {
-  await db.insertWaitlistBulk(req.body);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.insertWaitlistBulk(periodId, req.body);
   res.json({ success: true });
 }));
 
 app.delete('/api/waitlist/:id', handleError(async (req, res) => {
-  await db.deleteWaitlist(req.params.id);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.deleteWaitlist(periodId, req.params.id);
   res.json({ success: true });
 }));
 
-app.delete('/api/waitlist', handleError(async (_req, res) => {
-  await db.deleteAllWaitlist();
+app.delete('/api/waitlist', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json({ success: true }); return; }
+  await db.deleteAllWaitlist(periodId);
   res.json({ success: true });
 }));
 
-// Settings
+// ============ SETTINGS ============
+
 app.get('/api/settings', handleError(async (_req, res) => {
   const settings = await db.getSettings();
   res.json(settings);
@@ -128,29 +207,39 @@ app.post('/api/settings', handleError(async (req, res) => {
   res.json({ success: true });
 }));
 
-// Imports
-app.get('/api/imports/latest', handleError(async (_req, res) => {
-  const result = await db.getLatestImport();
+// ============ IMPORTS ============
+
+app.get('/api/imports/latest', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json(null); return; }
+  const result = await db.getLatestImport(periodId);
   res.json(result.rows[0] || null);
 }));
 
 app.post('/api/imports', handleError(async (req, res) => {
-  await db.insertImport(req.body);
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.insertImport(periodId, req.body);
   res.json({ success: true });
 }));
 
-app.delete('/api/imports', handleError(async (_req, res) => {
-  await db.deleteAllImports();
+app.delete('/api/imports', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json({ success: true }); return; }
+  await db.deleteAllImports(periodId);
   res.json({ success: true });
 }));
 
-// Clear all data
-app.delete('/api/all', handleError(async (_req, res) => {
-  await db.deleteAllAppointments();
-  await db.deleteAllWaitlist();
-  await db.deleteAllSubmissions();
-  await db.deleteAllPlayers();
-  await db.deleteAllImports();
+// ============ CLEAR ALL ============
+
+app.delete('/api/all', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json({ success: true }); return; }
+  await db.deleteAllAppointments(periodId);
+  await db.deleteAllWaitlist(periodId);
+  await db.deleteAllSubmissions(periodId);
+  await db.deleteAllPlayers(periodId);
+  await db.deleteAllImports(periodId);
   res.json({ success: true });
 }));
 
