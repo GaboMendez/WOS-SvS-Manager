@@ -54,6 +54,11 @@ app.post('/api/periods/:id/close', handleError(async (req, res) => {
   res.json({ success: true });
 }));
 
+app.delete('/api/periods/:id', handleError(async (req, res) => {
+  await db.deletePeriod(req.params.id);
+  res.json({ success: true });
+}));
+
 // ============ PLAYERS ============
 
 app.get('/api/players', handleError(async (req, res) => {

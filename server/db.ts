@@ -149,6 +149,17 @@ export function closePeriod(id: string) {
   );
 }
 
+export function deletePeriod(id: string) {
+  // Delete all related data first (due to foreign key constraints)
+  db.execute('DELETE FROM waitlist WHERE period_id = ?', [id]);
+  db.execute('DELETE FROM appointments WHERE period_id = ?', [id]);
+  db.execute('DELETE FROM submissions WHERE period_id = ?', [id]);
+  db.execute('DELETE FROM players WHERE period_id = ?', [id]);
+  db.execute('DELETE FROM imports WHERE period_id = ?', [id]);
+  // Finally delete the period
+  return db.execute('DELETE FROM periods WHERE id = ?', [id]);
+}
+
 // ============ PLAYERS ============
 
 export function getPlayers(periodId: string) {
