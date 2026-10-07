@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Home, Users, Github, Info } from "lucide-react";
-import { useCurrentPeriod, useSaveSlingshotEntry, useSlingshotEntries, calculateSlingshotPoints, SLINGSHOT_POINTS, type SlingshotActivityKey } from "@/lib/slingshot/data";
+import { Home, Users, Github, Info, Pencil, Trash2 } from "lucide-react";
+import { useCurrentPeriod, useSaveSlingshotEntry, useSlingshotEntries, useDeleteSlingshotEntry, calculateSlingshotPoints, SLINGSHOT_POINTS, type SlingshotActivityKey, type SlingshotEntry } from "@/lib/slingshot/data";
+
+// Check if running on localhost
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 import pets01 from "@/assets/pets/pets01.jpg";
 import pets02 from "@/assets/pets/pets02.jpg";
 import chiefGear01 from "@/assets/chief_gear/chief_gear01.jpg";
@@ -40,7 +43,7 @@ export const Route = createFileRoute("/slingshot")({
 });
 
 function SlingshotPage() {
-  const [activeTab, setActiveTab] = useState<"entry" | "subscribers">("entry");
+  const [activeTab, setActiveTab] = useState<"entry" | "players">("entry");
 
   return (
     <div className="min-h-screen bg-ink text-fg">
@@ -75,7 +78,7 @@ function SlingshotPage() {
 
       {/* Content */}
       <div className="p-4">
-        {activeTab === "entry" ? <PlayerEntryForm onSaved={() => setActiveTab("subscribers")} /> : <SubscribersList onSelectPlayer={() => {}} />}
+        {activeTab === "entry" ? <PlayerEntryForm onSaved={() => setActiveTab("players")} /> : <PlayersList />}
       </div>
 
       {/* Bottom Tab Bar */}
@@ -94,15 +97,15 @@ function SlingshotPage() {
           </button>
           <div className="w-px bg-line" />
           <button
-            onClick={() => setActiveTab("subscribers")}
+            onClick={() => setActiveTab("players")}
             className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
-              activeTab === "subscribers"
+              activeTab === "players"
                 ? "text-primary bg-primary/10"
                 : "text-mut hover:text-fg"
             }`}
           >
             <Users className="size-4" />
-            Subscribers
+            Players
           </button>
         </div>
       </div>
@@ -417,11 +420,164 @@ function PlayerEntryForm({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-function SubscribersList({ onSelectPlayer }: { onSelectPlayer: () => void }) {
+function PlayerEditForm({ entry, onSaved, onCancel }: { entry: SlingshotEntry; onSaved: () => void; onCancel: () => void }) {
+  const currentPeriod = useCurrentPeriod();
+  const saveEntry = useSaveSlingshotEntry();
+
+  const [playerName, setPlayerName] = useState(entry.player_name);
+  const [playerId] = useState(entry.player_id);
+  const [activities, setActivities] = useState<Record<SlingshotActivityKey, number>>({
+    pet_advancement: entry.pet_advancement,
+    advanced_wild_mark: entry.advanced_wild_mark,
+    common_wild_mark: entry.common_wild_mark,
+    chief_gear_score: entry.chief_gear_score,
+    hero_gear_essence_stone: entry.hero_gear_essence_stone,
+    hero_exclusive_gear_widget: entry.hero_exclusive_gear_widget,
+    mithril: entry.mithril,
+    fire_crystal: entry.fire_crystal,
+    construction_speedup_minutes: entry.construction_speedup_minutes,
+    research_speedup_minutes: entry.research_speedup_minutes,
+    training_speedup_minutes: entry.training_speedup_minutes,
+    expert_skills_speedup_minutes: entry.expert_skills_speedup_minutes,
+    fire_crystal_shard: entry.fire_crystal_shard,
+    refined_fire_crystal: entry.refined_fire_crystal,
+  });
+
+  const totalPoints = calculateSlingshotPoints(activities);
+
+  const handleActivityChange = (key: SlingshotActivityKey, value: number) => {
+    setActivities((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!playerName.trim()) {
+      toast.error("Player name is required");
+      return;
+    }
+
+    if (!currentPeriod.data?.id) {
+      toast.error("No active period. Please create a period first.");
+      return;
+    }
+
+    try {
+      await saveEntry.mutateAsync({
+        id: entry.id,
+        player_id: playerId,
+        player_name: playerName.trim(),
+        ...activities,
+        total_points: totalPoints,
+      });
+      onSaved();
+    } catch (error) {
+      toast.error(String(error));
+    }
+  };
+
+  const activityList: { key: SlingshotActivityKey; label: string; unit?: string }[] = [
+    { key: "pet_advancement", label: "Pet Advancement" },
+    { key: "advanced_wild_mark", label: "Advanced Wild Mark" },
+    { key: "common_wild_mark", label: "Common Wild Mark" },
+    { key: "chief_gear_score", label: "Chief Gear Score" },
+    { key: "hero_gear_essence_stone", label: "Hero Gear Essence Stone" },
+    { key: "hero_exclusive_gear_widget", label: "Widget of Hero Exclusive Gear" },
+    { key: "mithril", label: "Mithril" },
+    { key: "fire_crystal", label: "Fire Crystal" },
+    { key: "construction_speedup_minutes", label: "Construction Speedup", unit: "min" },
+    { key: "research_speedup_minutes", label: "Research Speedup", unit: "min" },
+    { key: "training_speedup_minutes", label: "Troops Training Speedup", unit: "min" },
+    { key: "expert_skills_speedup_minutes", label: "Expert Skills Learning Speedup", unit: "min" },
+    { key: "fire_crystal_shard", label: "Fire Crystal Shard" },
+    { key: "refined_fire_crystal", label: "Refined Fire Crystal" },
+  ];
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Player Info */}
+      <div className="rounded-md ring-1 ring-line bg-panel p-4 space-y-3">
+        <h2 className="text-sm font-semibold">Player Information</h2>
+        <div>
+          <label className="block text-xs font-medium text-mut mb-1">Player Name</label>
+          <Input
+            type="text"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            placeholder="Enter player name"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-mut mb-1">Player ID</label>
+          <Input
+            type="text"
+            value={playerId}
+            disabled
+            className="opacity-60"
+          />
+        </div>
+      </div>
+
+      {/* Activities */}
+      <div className="rounded-md ring-1 ring-line bg-panel p-4">
+        <h2 className="text-sm font-semibold mb-4">Activities</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {activityList.map((activity) => (
+            <ActivityInput
+              key={activity.key}
+              label={activity.label}
+              value={activities[activity.key]}
+              pointsPerUnit={SLINGSHOT_POINTS[activity.key]}
+              onChange={(val) => handleActivityChange(activity.key, val)}
+              unit={activity.unit || ""}
+              showInfo={false}
+              onInfoClick={undefined}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Total */}
+      <div className="rounded-md ring-1 ring-primary bg-panel p-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold">Total Points</p>
+          <p className="font-mono text-xs text-mut">Sum of all activities</p>
+        </div>
+        <p className="text-2xl font-bold font-mono text-primary">{totalPoints.toLocaleString()}</p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1"
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={saveEntry.isPending}
+          className="flex-1"
+        >
+          {saveEntry.isPending ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function PlayersList() {
   const entries = useSlingshotEntries();
   const currentPeriod = useCurrentPeriod();
+  const deleteEntry = useDeleteSlingshotEntry();
 
-  const [selectedEntry, setSelectedEntry] = useState<(typeof entries.data)[0] | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<SlingshotEntry | null>(null);
+  const [editingEntry, setEditingEntry] = useState<SlingshotEntry | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<SlingshotEntry | null>(null);
 
   if (!currentPeriod.data) {
     return (
@@ -478,21 +634,50 @@ function SubscribersList({ onSelectPlayer }: { onSelectPlayer: () => void }) {
       {/* Player List */}
       <div className="space-y-2">
         {entries.data.map((entry) => (
-          <button
+          <div
             key={entry.id}
-            onClick={() => setSelectedEntry(entry)}
-            className="w-full rounded-md ring-1 ring-line bg-panel p-4 text-left hover:ring-primary transition-colors"
+            className="w-full rounded-md ring-1 ring-line bg-panel p-4 hover:ring-primary transition-colors"
           >
             <div className="flex items-center justify-between">
-              <div>
+              <button
+                onClick={() => setSelectedEntry(entry)}
+                className="flex-1 text-left"
+              >
                 <p className="text-sm font-semibold">{entry.player_name}</p>
                 <p className="font-mono text-xs text-mut">ID: {entry.player_id}</p>
+              </button>
+              <div className="flex items-center gap-2">
+                <p className="font-mono text-lg font-bold text-primary">
+                  {entry.total_points.toLocaleString()}
+                </p>
+                {isLocalhost && (
+                  <div className="flex items-center gap-1 ml-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingEntry(entry);
+                      }}
+                      className="p-2 rounded-md hover:bg-panel2 text-mut hover:text-fg transition-colors"
+                      title="Edit"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEntryToDelete(entry);
+                        setShowDeleteConfirm(true);
+                      }}
+                      className="p-2 rounded-md hover:bg-panel2 text-mut hover:text-warn transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                )}
               </div>
-              <p className="font-mono text-lg font-bold text-primary">
-                {entry.total_points.toLocaleString()}
-              </p>
             </div>
-          </button>
+          </div>
         ))}
       </div>
 
@@ -548,6 +733,74 @@ function SubscribersList({ onSelectPlayer }: { onSelectPlayer: () => void }) {
                 })}
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={(open) => {
+        setShowDeleteConfirm(open);
+        if (!open) setEntryToDelete(null);
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Player</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {entryToDelete?.player_name}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setEntryToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              disabled={deleteEntry.isPending}
+              onClick={async () => {
+                if (!entryToDelete) return;
+                try {
+                  await deleteEntry.mutateAsync(entryToDelete.player_id);
+                  toast.success("Player deleted successfully");
+                  setShowDeleteConfirm(false);
+                  setEntryToDelete(null);
+                  setSelectedEntry(null);
+                } catch (error) {
+                  toast.error(String(error));
+                }
+              }}
+            >
+              {deleteEntry.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Player</DialogTitle>
+            <DialogDescription>Update the activities for {editingEntry?.player_name}</DialogDescription>
+          </DialogHeader>
+
+          {editingEntry && (
+            <PlayerEditForm
+              entry={editingEntry}
+              onSaved={() => {
+                setEditingEntry(null);
+                setSelectedEntry(null);
+                toast.success("Player updated successfully");
+              }}
+              onCancel={() => setEditingEntry(null)}
+            />
           )}
         </DialogContent>
       </Dialog>
