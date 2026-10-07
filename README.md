@@ -119,9 +119,7 @@ A dedicated page generates copy-paste-ready messages for each alliance's R4/R5 t
 ### Database
 
 - **Development**: Local SQLite at `data/wos-svs-manager.db`
-- **Production**: Local SQLite (no persistence - data resets on each deploy)
-
-**Note**: The production database does not persist data between deploys. For production persistence, you would need to add a persistent disk or use an external database service.
+- **Production**: Local SQLite with persistent disk (Render) OR Turso remote database
 
 #### Environment Variables
 
@@ -131,11 +129,87 @@ Create a `.env` file:
 VITE_API_URL=http://localhost:3001/api
 ```
 
+### Database Options
+
+#### Option 1: Local SQLite with Persistent Disk (Render)
+
+When deploying to Render with a persistent disk, the database is stored at `/var/data/wos-svs-manager.db`. The application automatically detects the Render environment and uses the correct path.
+
+#### Option 2: Turso Remote Database
+
+For production deployments without persistent disk, you can use Turso (libSQL) as a remote database:
+
+```env
+TURSO_DATABASE_URL=libsql://your-database.turso.io
+TURSO_AUTH_TOKEN=your-auth-token
+USE_TURSO=1
+```
+
+**Setup Turso:**
+1. Create an account at https://turso.tech
+2. Create a new database
+3. Get the database URL and authentication token
+4. Set the environment variables in your deployment platform
+
+### Database Migrations
+
+The project uses SQL migrations that run automatically on server startup.
+
+**How migrations work:**
+- Migration files are stored in `server/migrations/` as `.sql` files
+- On server startup, the app checks which migrations have been applied
+- Any pending migrations run automatically
+- Applied migrations are tracked in a `__migrations` table
+
+**Adding a new migration:**
+1. Create a new `.sql` file in `server/migrations/` (e.g., `002_add_new_field.sql`)
+2. Push to `main`
+3. On next deploy, migrations run automatically on startup
+
+**Running migrations locally:**
+
+```bash
+# Set Turso credentials locally
+export TURSO_DATABASE_URL=libsql://your-database.turso.io
+export TURSO_AUTH_TOKEN=your-auth-token
+export USE_TURSO=1
+
+# Run migrations
+npm run migrate
+```
+
 ### Deployment
 
-**Backend API**: Self-hosted on Oracle Cloud (free forever)
+#### Backend API (Render with Persistent Disk)
 
-See [DEPLOY_ORACLE.md](./DEPLOY_ORACLE.md) for step-by-step instructions to deploy on Oracle Cloud's always-free tier with persistent storage.
+1. Create a new Web Service on Render
+2. Connect your GitHub repository
+3. Configure:
+   - **Build Command**: `npm run build`
+   - **Start Command**: `npm run start` (or `node server/index.js` for production)
+   - **Environment**: Node
+4. Add a Persistent Disk:
+   - Size: 1GB (minimum)
+   - Mount Path: `/var/data`
+5. Add environment variables:
+   - `RENDER=true`
+   - `PORT=3001`
+6. Deploy
+
+The database will persist in the persistent disk at `/var/data/wos-svs-manager.db`.
+
+#### Frontend Deployment (Vercel)
+
+1. Create a Vercel account and import your GitHub repository
+2. Configure:
+   - **Framework Preset**: Other
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist/client`
+3. Add environment variable:
+   - `VITE_API_URL=https://your-render-service.onrender.com/api`
+4. Deploy
+
+The frontend will be automatically deployed to Vercel's global CDN.
 
 ### Other scripts
 
