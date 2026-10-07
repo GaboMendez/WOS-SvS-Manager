@@ -58,13 +58,6 @@ function SlingshotPage() {
             </div>
           </div>
 
-          {/* Total Points (middle) */}
-          {activeTab === "subscribers" && (
-            <div className="flex-1 text-center">
-              <SlingshotTotal />
-            </div>
-          )}
-
           {/* GitHub repository */}
           <div>
             <a
@@ -137,9 +130,9 @@ interface ActivityInputProps {
   value: number;
   pointsPerUnit: number;
   onChange: (value: number) => void;
-  unit?: string;
-  showInfo?: boolean;
-  onInfoClick?: () => void;
+  unit: string;
+  showInfo: boolean;
+  onInfoClick: (() => void) | undefined;
 }
 
 function ActivityInput({ label, value, pointsPerUnit, onChange, unit, showInfo, onInfoClick }: ActivityInputProps) {
@@ -353,8 +346,8 @@ function PlayerEntryForm({ onSaved }: { onSaved: () => void }) {
               value={activities[activity.key]}
               pointsPerUnit={SLINGSHOT_POINTS[activity.key]}
               onChange={(val) => handleActivityChange(activity.key, val)}
-              unit={activity.unit}
-              showInfo={activity.showInfo}
+              unit={activity.unit || ""}
+              showInfo={!!activity.showInfo}
               onInfoClick={activity.showInfo ? (activity.key === "pet_advancement" ? () => setShowPetInfo(true) : () => setShowChiefGearInfo(true)) : undefined}
             />
           ))}
