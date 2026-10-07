@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Home, Users, Github, Info, Pencil, Trash2 } from "lucide-react";
@@ -51,15 +51,15 @@ function SlingshotPage() {
       <div className="sticky top-0 z-20 bg-panel border-b border-line">
         <div className="px-4 py-4 border-b border-line flex items-center justify-between">
           {/* Brand */}
-          <div className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5">
             <div className="size-10 grid place-items-center bg-primary text-primary-foreground font-bold text-sm">
               3496
             </div>
             <div className="leading-none">
               <p className="font-semibold text-[16px] tracking-tight">SvS Preparation</p>
-              <p className="text-[12px] font-mono text-mut mt-1.5">Operation Slingshot</p>
+              <p className="text-[12px] font-mono text-mut mt-1.5">OPERATION SLINGSHOT</p>
             </div>
-          </div>
+          </Link>
 
           {/* GitHub repository */}
           <div>
@@ -718,15 +718,16 @@ function PlayersList() {
                   { key: "refined_fire_crystal", label: "Refined Fire Crystal" },
                 ].map(({ key, label }) => {
                   const value = selectedEntry[key as keyof typeof selectedEntry] as number;
-                  const points = value * SLINGSHOT_POINTS[key as SlingshotActivityKey];
+                  const pointsPerUnit = SLINGSHOT_POINTS[key as SlingshotActivityKey];
+                  const totalPoints = value * pointsPerUnit;
                   if (value === 0) return null;
                   return (
                     <div key={key} className="flex items-center justify-between text-sm">
-                      <span className="text-mut">{label}</span>
-                      <div className="text-right">
-                        <span className="font-mono">{value.toLocaleString()}</span>
-                        <span className="text-mut mx-2">×</span>
-                        <span className="font-mono text-primary">{points.toLocaleString()}</span>
+                      <span className="text-mut">{label} ({pointsPerUnit.toLocaleString()} pts)</span>
+                      <div className="flex items-center gap-2 font-mono">
+                        <span>{value.toLocaleString()}</span>
+                        <span className="text-mut">=</span>
+                        <span className="text-primary font-semibold">{totalPoints.toLocaleString()}</span>
                       </div>
                     </div>
                   );
