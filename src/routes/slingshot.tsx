@@ -1,8 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Home, Users, Github } from "lucide-react";
+import { Home, Users, Github, Info } from "lucide-react";
 import { useCurrentPeriod, useSaveSlingshotEntry, useSlingshotEntries, calculateSlingshotPoints, SLINGSHOT_POINTS, type SlingshotActivityKey } from "@/lib/slingshot/data";
+import pets01 from "@/assets/pets/pets01.jpg";
+import pets02 from "@/assets/pets/pets02.jpg";
+import chiefGear01 from "@/assets/chief_gear/chief_gear01.jpg";
+import chiefGear02 from "@/assets/chief_gear/chief_gear02.jpg";
+import chiefGear03 from "@/assets/chief_gear/chief_gear03.jpg";
+import chiefGear04 from "@/assets/chief_gear/chief_gear04.jpg";
+import chiefGear05 from "@/assets/chief_gear/chief_gear05.jpg";
+import chiefGear06 from "@/assets/chief_gear/chief_gear06.jpg";
+import chiefGear07 from "@/assets/chief_gear/chief_gear07.jpg";
+import chiefGear08 from "@/assets/chief_gear/chief_gear08.jpg";
+import chiefGear09 from "@/assets/chief_gear/chief_gear09.jpg";
+import chiefGear10 from "@/assets/chief_gear/chief_gear10.jpg";
+import chiefGear11 from "@/assets/chief_gear/chief_gear11.jpg";
+import chiefGear12 from "@/assets/chief_gear/chief_gear12.jpg";
+import chiefGear13 from "@/assets/chief_gear/chief_gear13.jpg";
+import chiefGear14 from "@/assets/chief_gear/chief_gear14.jpg";
+
+const chiefGearImages = [
+  chiefGear01, chiefGear02, chiefGear03, chiefGear04, chiefGear05,
+  chiefGear06, chiefGear07, chiefGear08, chiefGear09, chiefGear10,
+  chiefGear11, chiefGear12, chiefGear13, chiefGear14,
+];
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -116,9 +138,11 @@ interface ActivityInputProps {
   pointsPerUnit: number;
   onChange: (value: number) => void;
   unit?: string;
+  showInfo?: boolean;
+  onInfoClick?: () => void;
 }
 
-function ActivityInput({ label, value, pointsPerUnit, onChange, unit }: ActivityInputProps) {
+function ActivityInput({ label, value, pointsPerUnit, onChange, unit, showInfo, onInfoClick }: ActivityInputProps) {
   const handleDecrement = () => {
     if (value > 0) onChange(value - 1);
   };
@@ -141,7 +165,19 @@ function ActivityInput({ label, value, pointsPerUnit, onChange, unit }: Activity
   return (
     <div className="rounded-md ring-1 ring-line bg-panel2 p-3 flex flex-col gap-2">
       <div className="flex items-start justify-between">
-        <p className="text-sm font-medium leading-tight">{label}</p>
+        <div className="flex items-center gap-2 flex-1">
+          <p className="text-sm font-medium leading-tight">{label}</p>
+          {showInfo && (
+            <button
+              type="button"
+              onClick={onInfoClick}
+              className="p-1 rounded-full bg-panel border border-line text-mut hover:text-fg hover:bg-panel2 transition-colors"
+              title="View pet guide"
+            >
+              <Info className="size-3.5" />
+            </button>
+          )}
+        </div>
         <p className="font-mono text-xs text-mut whitespace-nowrap">
           {pointsPerUnit.toLocaleString()} pts{unit ? ` / ${unit}` : ""}
         </p>
@@ -153,6 +189,7 @@ function ActivityInput({ label, value, pointsPerUnit, onChange, unit }: Activity
         </div>
         <div className="flex items-center">
           <button
+            type="button"
             onClick={handleDecrement}
             disabled={value === 0}
             className="w-8 h-8 flex items-center justify-center rounded-l-md bg-panel border border-line text-fg hover:bg-panel2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -166,6 +203,7 @@ function ActivityInput({ label, value, pointsPerUnit, onChange, unit }: Activity
             className="w-16 h-8 text-center bg-panel border-y border-line text-sm font-mono [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
           <button
+            type="button"
             onClick={handleIncrement}
             className="w-8 h-8 flex items-center justify-center rounded-r-md bg-panel border border-line text-fg hover:bg-panel2"
           >
@@ -183,6 +221,8 @@ function PlayerEntryForm({ onSaved }: { onSaved: () => void }) {
 
   const [playerName, setPlayerName] = useState("");
   const [playerId, setPlayerId] = useState("");
+  const [showPetInfo, setShowPetInfo] = useState(false);
+  const [showChiefGearInfo, setShowChiefGearInfo] = useState(false);
   const [activities, setActivities] = useState<Record<SlingshotActivityKey, number>>({
     pet_advancement: 0,
     advanced_wild_mark: 0,
@@ -258,11 +298,11 @@ function PlayerEntryForm({ onSaved }: { onSaved: () => void }) {
     }
   };
 
-  const activityList: { key: SlingshotActivityKey; label: string; unit?: string }[] = [
-    { key: "pet_advancement", label: "Pet advancement (score +1)" },
+  const activityList: { key: SlingshotActivityKey; label: string; unit?: string; showInfo?: boolean }[] = [
+    { key: "pet_advancement", label: "Pet Advancement (score +1)", showInfo: true },
     { key: "advanced_wild_mark", label: "Advanced Wild Mark" },
     { key: "common_wild_mark", label: "Common Wild Mark" },
-    { key: "chief_gear_score", label: "Chief Gear Score (+1)" },
+    { key: "chief_gear_score", label: "Chief Gear (score +1)", showInfo: true },
     { key: "hero_gear_essence_stone", label: "Hero Gear Essence Stone" },
     { key: "hero_exclusive_gear_widget", label: "Widget of Hero Exclusive Gear" },
     { key: "mithril", label: "Mithril" },
@@ -314,6 +354,8 @@ function PlayerEntryForm({ onSaved }: { onSaved: () => void }) {
               pointsPerUnit={SLINGSHOT_POINTS[activity.key]}
               onChange={(val) => handleActivityChange(activity.key, val)}
               unit={activity.unit}
+              showInfo={activity.showInfo}
+              onInfoClick={activity.showInfo ? (activity.key === "pet_advancement" ? () => setShowPetInfo(true) : () => setShowChiefGearInfo(true)) : undefined}
             />
           ))}
         </div>
@@ -336,6 +378,48 @@ function PlayerEntryForm({ onSaved }: { onSaved: () => void }) {
       >
         {saveEntry.isPending ? "Saving..." : "Save"}
       </Button>
+
+      {/* Pet Info Modal */}
+      <Dialog open={showPetInfo} onOpenChange={(open) => setShowPetInfo(open)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Pet Advancement Guide</DialogTitle>
+            <DialogDescription>Pet advancement score increases by 1 for each pet evolved.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            <img src={pets01} alt="Pet 1" className="w-full rounded-md" />
+            <img src={pets02} alt="Pet 2" className="w-full rounded-md" />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Chief Gear Info Modal */}
+      <Dialog open={showChiefGearInfo} onOpenChange={(open) => setShowChiefGearInfo(open)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Chief Gear Guide</DialogTitle>
+            <DialogDescription>Chief Gear Score increases by 1 for each piece of gear upgraded.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {chiefGearImages.map((img, idx) => (
+              <img key={idx} src={img} alt={`Chief Gear ${idx + 1}`} className="w-full rounded-md" />
+            ))}
+          </div>
+          <div className="mt-4 p-3 rounded-md bg-panel2 border border-line">
+            <p className="text-sm text-mut mb-2">
+              If you want to calculate your upgrades for Chief Gear, you can use the following link:
+            </p>
+            <a
+              href="https://quackulator.com/chiefgear.php"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-primary hover:underline"
+            >
+              Calculate Chief Gear →
+            </a>
+          </div>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }
