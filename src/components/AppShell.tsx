@@ -109,6 +109,11 @@ export function AppShell({
         >
           Scoring
         </PageLink>
+        <PageLink to="/slingshot" active={pathname === "/slingshot"}
+          onClick={() => setMobileOpen(false)}
+        >
+          Slingshot
+        </PageLink>
         <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
           History
         </div>

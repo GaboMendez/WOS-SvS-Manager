@@ -282,3 +282,123 @@ export function insertImport(periodId: string, imp: { id: string; filename: stri
 export function deleteAllImports(periodId: string) {
   return db.execute('DELETE FROM imports WHERE period_id = ?', [periodId]);
 }
+
+// ============ SLINGSHOT ENTRIES ============
+
+export interface SlingshotEntry {
+  id: string;
+  period_id: string;
+  player_id: string;
+  player_name: string;
+  pet_advancement: number;
+  advanced_wild_mark: number;
+  common_wild_mark: number;
+  chief_gear_score: number;
+  hero_gear_essence_stone: number;
+  hero_exclusive_gear_widget: number;
+  mithril: number;
+  fire_crystal: number;
+  construction_speedup_minutes: number;
+  research_speedup_minutes: number;
+  training_speedup_minutes: number;
+  expert_skills_speedup_minutes: number;
+  fire_crystal_shard: number;
+  refined_fire_crystal: number;
+  total_points: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export function getSlingshotEntries(periodId: string) {
+  return db.execute(
+    'SELECT * FROM slingshot_entries WHERE period_id = ? ORDER BY player_name',
+    [periodId]
+  );
+}
+
+export function getSlingshotEntry(periodId: string, playerId: string) {
+  return db.execute(
+    'SELECT * FROM slingshot_entries WHERE period_id = ? AND player_id = ?',
+    [periodId, playerId]
+  );
+}
+
+export function upsertSlingshotEntry(periodId: string, entry: {
+  id: string;
+  player_id: string;
+  player_name: string;
+  pet_advancement?: number;
+  advanced_wild_mark?: number;
+  common_wild_mark?: number;
+  chief_gear_score?: number;
+  hero_gear_essence_stone?: number;
+  hero_exclusive_gear_widget?: number;
+  mithril?: number;
+  fire_crystal?: number;
+  construction_speedup_minutes?: number;
+  research_speedup_minutes?: number;
+  training_speedup_minutes?: number;
+  expert_skills_speedup_minutes?: number;
+  fire_crystal_shard?: number;
+  refined_fire_crystal?: number;
+  total_points: number;
+}) {
+  const now = new Date().toISOString();
+  return db.execute(
+    `INSERT INTO slingshot_entries (
+      id, period_id, player_id, player_name, pet_advancement, advanced_wild_mark,
+      common_wild_mark, chief_gear_score, hero_gear_essence_stone, hero_exclusive_gear_widget,
+      mithril, fire_crystal, construction_speedup_minutes, research_speedup_minutes,
+      training_speedup_minutes, expert_skills_speedup_minutes, fire_crystal_shard,
+      refined_fire_crystal, total_points, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(player_id, period_id) DO UPDATE SET
+      player_name = excluded.player_name,
+      pet_advancement = excluded.pet_advancement,
+      advanced_wild_mark = excluded.advanced_wild_mark,
+      common_wild_mark = excluded.common_wild_mark,
+      chief_gear_score = excluded.chief_gear_score,
+      hero_gear_essence_stone = excluded.hero_gear_essence_stone,
+      hero_exclusive_gear_widget = excluded.hero_exclusive_gear_widget,
+      mithril = excluded.mithril,
+      fire_crystal = excluded.fire_crystal,
+      construction_speedup_minutes = excluded.construction_speedup_minutes,
+      research_speedup_minutes = excluded.research_speedup_minutes,
+      training_speedup_minutes = excluded.training_speedup_minutes,
+      expert_skills_speedup_minutes = excluded.expert_skills_speedup_minutes,
+      fire_crystal_shard = excluded.fire_crystal_shard,
+      refined_fire_crystal = excluded.refined_fire_crystal,
+      total_points = excluded.total_points,
+      updated_at = excluded.updated_at`,
+    [
+      entry.id,
+      periodId,
+      entry.player_id,
+      entry.player_name,
+      entry.pet_advancement ?? 0,
+      entry.advanced_wild_mark ?? 0,
+      entry.common_wild_mark ?? 0,
+      entry.chief_gear_score ?? 0,
+      entry.hero_gear_essence_stone ?? 0,
+      entry.hero_exclusive_gear_widget ?? 0,
+      entry.mithril ?? 0,
+      entry.fire_crystal ?? 0,
+      entry.construction_speedup_minutes ?? 0,
+      entry.research_speedup_minutes ?? 0,
+      entry.training_speedup_minutes ?? 0,
+      entry.expert_skills_speedup_minutes ?? 0,
+      entry.fire_crystal_shard ?? 0,
+      entry.refined_fire_crystal ?? 0,
+      entry.total_points,
+      now,
+      now
+    ]
+  );
+}
+
+export function deleteSlingshotEntry(periodId: string, playerId: string) {
+  return db.execute(
+    'DELETE FROM slingshot_entries WHERE period_id = ? AND player_id = ?',
+    [periodId, playerId]
+  );
+}

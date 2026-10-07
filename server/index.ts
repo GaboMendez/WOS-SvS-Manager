@@ -254,6 +254,36 @@ app.delete('/api/all', handleError(async (req, res) => {
   res.json({ success: true });
 }));
 
+// ============ SLINGSHOT ENTRIES ============
+
+app.get('/api/slingshot', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json([]); return; }
+  const result = await db.getSlingshotEntries(periodId);
+  res.json(result.rows);
+}));
+
+app.get('/api/slingshot/:playerId', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json(null); return; }
+  const result = await db.getSlingshotEntry(periodId, req.params.playerId);
+  res.json(result.rows[0] || null);
+}));
+
+app.post('/api/slingshot', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.status(400).json({ error: 'No active period' }); return; }
+  await db.upsertSlingshotEntry(periodId, req.body);
+  res.json({ success: true });
+}));
+
+app.delete('/api/slingshot/:playerId', handleError(async (req, res) => {
+  const periodId = await getPeriodId(req);
+  if (!periodId) { res.json({ success: true }); return; }
+  await db.deleteSlingshotEntry(periodId, req.params.playerId);
+  res.json({ success: true });
+}));
+
 app.listen(PORT, () => {
   console.log(`API server running on http://localhost:${PORT}`);
 });

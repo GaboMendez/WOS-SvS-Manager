@@ -158,4 +158,37 @@ export const api = {
 
   // Clear all
   wipeAll: (periodId?: string) => fetchJson<{ success: boolean }>(buildUrl('/all', periodId), { method: 'DELETE' }),
+
+  // Slingshot entries
+  getSlingshotEntries: (periodId?: string) => fetchJson<unknown[]>(buildUrl('/slingshot', periodId)),
+
+  getSlingshotEntry: (playerId: string, periodId?: string) => fetchJson<unknown | null>(buildUrl(`/slingshot/${playerId}`, periodId)),
+
+  saveSlingshotEntry: (entry: {
+    id: string;
+    player_id: string;
+    player_name: string;
+    pet_advancement?: number;
+    advanced_wild_mark?: number;
+    common_wild_mark?: number;
+    chief_gear_score?: number;
+    hero_gear_essence_stone?: number;
+    hero_exclusive_gear_widget?: number;
+    mithril?: number;
+    fire_crystal?: number;
+    construction_speedup_minutes?: number;
+    research_speedup_minutes?: number;
+    training_speedup_minutes?: number;
+    expert_skills_speedup_minutes?: number;
+    fire_crystal_shard?: number;
+    refined_fire_crystal?: number;
+    total_points: number;
+  }, periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl('/slingshot', periodId), {
+      method: 'POST',
+      body: JSON.stringify(entry),
+    }),
+
+  deleteSlingshotEntry: (playerId: string, periodId?: string) =>
+    fetchJson<{ success: boolean }>(buildUrl(`/slingshot/${playerId}`, periodId), { method: 'DELETE' }),
 };

@@ -16,6 +16,7 @@ import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as PeriodsRouteImport } from './routes/periods'
 import { Route as PlayersRouteImport } from './routes/players'
 import { Route as ScoringRouteImport } from './routes/scoring'
+import { Route as SlingshotRouteImport } from './routes/slingshot'
 import { Route as PeriodsPeriodIdRouteImport } from './routes/periods.$periodId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +54,11 @@ const ScoringRoute = ScoringRouteImport.update({
   path: '/scoring',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SlingshotRoute = SlingshotRouteImport.update({
+  id: '/slingshot',
+  path: '/slingshot',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PeriodsPeriodIdRoute = PeriodsPeriodIdRouteImport.update({
   id: '/$periodId',
   path: '/$periodId',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/periods': typeof PeriodsRouteWithChildren
   '/players': typeof PlayersRoute
   '/scoring': typeof ScoringRoute
+  '/slingshot': typeof SlingshotRoute
   '/periods/$periodId': typeof PeriodsPeriodIdRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/periods': typeof PeriodsRouteWithChildren
   '/players': typeof PlayersRoute
   '/scoring': typeof ScoringRoute
+  '/slingshot': typeof SlingshotRoute
   '/periods/$periodId': typeof PeriodsPeriodIdRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/periods': typeof PeriodsRouteWithChildren
   '/players': typeof PlayersRoute
   '/scoring': typeof ScoringRoute
+  '/slingshot': typeof SlingshotRoute
   '/periods/$periodId': typeof PeriodsPeriodIdRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/periods'
     | '/players'
     | '/scoring'
+    | '/slingshot'
     | '/periods/$periodId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/periods'
     | '/players'
     | '/scoring'
+    | '/slingshot'
     | '/periods/$periodId'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/periods'
     | '/players'
     | '/scoring'
+    | '/slingshot'
     | '/periods/$periodId'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   PeriodsRoute: typeof PeriodsRouteWithChildren
   PlayersRoute: typeof PlayersRoute
   ScoringRoute: typeof ScoringRoute
+  SlingshotRoute: typeof SlingshotRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScoringRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/slingshot': {
+      id: '/slingshot'
+      path: '/slingshot'
+      fullPath: '/slingshot'
+      preLoaderRoute: typeof SlingshotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/periods/$periodId': {
       id: '/periods/$periodId'
       path: '/$periodId'
@@ -213,6 +233,7 @@ const rootRouteChildren: RootRouteChildren = {
   PeriodsRoute: PeriodsRouteWithChildren,
   PlayersRoute: PlayersRoute,
   ScoringRoute: ScoringRoute,
+  SlingshotRoute: SlingshotRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
