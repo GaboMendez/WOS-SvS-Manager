@@ -55,7 +55,7 @@ export function parseCsvRows(text: string): string[][] {
 }
 
 /** Google Forms export: 17 columns, fixed order (see spec). */
-export function parseCsv(text: string): ParsedImport {
+export function parseCsv(text: string, mondayActivity: 'construction' | 'research' = 'construction'): ParsedImport {
   const parsed = Papa.parse<string[]>(text.trim(), { skipEmptyLines: true });
   const rows = (parsed.data ?? []).filter((r) => Array.isArray(r) && r.length > 1);
   const warnings: ParseWarning[] = [];
@@ -110,9 +110,9 @@ export function parseCsv(text: string): ParsedImport {
     };
 
     if (submission.requests_monday && submission.mon_hours.length === 0)
-      warnings.push({ row: rowNo, message: `${name || playerId}: wants Monday but gave no times` });
+      warnings.push({ row: rowNo, message: `${name || playerId}: wants ${mondayActivity === 'research' ? 'Tuesday' : 'Monday'} construction but gave no times` });
     if (submission.requests_tuesday && submission.tue_hours.length === 0)
-      warnings.push({ row: rowNo, message: `${name || playerId}: wants Tuesday but gave no times` });
+      warnings.push({ row: rowNo, message: `${name || playerId}: wants ${mondayActivity === 'research' ? 'Monday' : 'Tuesday'} research but gave no times` });
     if (submission.requests_thursday && submission.thu_hours.length === 0)
       warnings.push({ row: rowNo, message: `${name || playerId}: wants Thursday but gave no times` });
 

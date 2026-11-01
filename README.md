@@ -36,11 +36,21 @@ flowchart TD
 The home page is a dashboard summarizing all imported data: total players, slots filled vs. open, waitlist size, and alliance participation, plus charts for slots filled per day, waitlist size per day, players per alliance, requested days, and priority score per alliance.
 ### CSV Import
 
+Create a period in **History** and choose its activity order before importing. For the swapped
+schedule, select Monday Research / Tuesday Construction; Thursday remains Training. The order
+is saved with the period and cannot be changed afterward. Existing periods keep Monday
+Construction / Tuesday Research. The importer uses the template's fixed column order and checks
+the weekday in the construction and research availability headers when present. Make sure the
+form's questions match the chosen period order.
+
+Close the previous period before creating the next one. Importing again replaces the current
+period's imported data, appointments, and manual changes; it does not replace closed periods.
+
 We can import the data from a .csv file. We only need to export the "Formularantworten 1" sheet as a .csv from the Excel Kopie von SVS Prep Signup Template (Antworten) file and upload it to the web app.
 
 A sample CSV is available to download directly from the Import page for anyone who wants to try the app without their own sign-up data.
 
-Once the file is processed, the app will clear the previous data and populate the application with the new data from the imported file.
+Once the file is processed, the app replaces the active period's data with the new import.
 ### Players
 
 There is a list of all players who filled out the form. We can search for players by:

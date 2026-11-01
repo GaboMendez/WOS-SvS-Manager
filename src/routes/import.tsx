@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { downloadCsv, parseCsv, parseCsvRows, type ParsedImport } from "@/lib/svs/csv";
 import { useCurrentPeriod, useImportCsv, useLatestImport, useRecompute } from "@/lib/svs/data";
+import { activityDay, daysFor } from "@/lib/svs/types";
 
 export const Route = createFileRoute("/import")({
   head: () => ({
@@ -44,11 +45,20 @@ function ImportPage() {
   );
   const csvHeader = csvRows[0] ?? [];
   const csvBody = csvRows.slice(1);
+  const uploadedHeader = useMemo(() => parseCsvRows(raw)[0] ?? [], [raw]);
+  const constructionHeader = uploadedHeader[8] ?? "";
+  const researchHeader = uploadedHeader[12] ?? "";
+  const expectedConstruction = currentPeriod.data?.monday_activity === "research" ? "tuesday" : "monday";
+  const expectedResearch = expectedConstruction === "monday" ? "tuesday" : "monday";
+  const mismatchedDays = [
+    [constructionHeader, expectedConstruction],
+    [researchHeader, expectedResearch],
+  ].some(([header, expected]) => /\b(monday|tuesday)\b/i.test(header!) && !new RegExp(`\\b${expected}\\b`, "i").test(header!));
 
   async function onFile(file: File) {
     const text = await file.text();
     try {
-      const result = parseCsv(text);
+      const result = parseCsv(text, currentPeriod.data?.monday_activity);
       setRaw(text);
       setFilename(file.name);
       setParsed(result);
@@ -153,6 +163,7 @@ function ImportPage() {
 
         {hasPeriod && (
           <>
+            <p className="text-sm text-mut">Period schedule: {daysFor(currentPeriod.data?.monday_activity).map(d => `${d.label}: ${d.focus}`).join(' · ')}. Make sure the CSV availability questions use these days.</p>
             <div className="rounded-md ring-1 ring-line bg-panel px-4 py-3 flex flex-wrap items-center gap-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">
@@ -227,12 +238,11 @@ function ImportPage() {
 
         {hasPeriod && parsed ? (
           <>
+            {mismatchedDays && <p className="rounded-md ring-1 ring-warn bg-panel p-3 text-sm text-warn">The CSV availability question days do not match this period's activity order. Create a period with the matching order or use a matching form before importing.</p>}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 ["Rows read", parsed.rowsRead],
-                ["Monday", parsed.counts.monday],
-                ["Tuesday", parsed.counts.tuesday],
-                ["Thursday", parsed.counts.thursday],
+                ...daysFor(currentPeriod.data?.monday_activity).map(d => [d.label, parsed.counts[activityDay(d.key, currentPeriod.data?.monday_activity)]]),
               ].map(([label, value]) => (
                 <div key={String(label)} className="rounded-md ring-1 ring-line bg-panel px-3 py-3">
                   <p className="text-[10px] font-mono uppercase tracking-widest text-mut">
@@ -268,6 +278,7 @@ function ImportPage() {
 
             <button
               onClick={save}
+              disabled={mismatchedDays}
               className="text-sm font-medium px-4 py-2 rounded-md bg-primary text-primary-foreground"
             >
               Save import and build schedule

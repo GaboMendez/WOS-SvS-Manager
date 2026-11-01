@@ -10,10 +10,11 @@ import {
   useSchedule,
   useSetSlot,
   useWeights,
+  useCurrentPeriod,
 } from "@/lib/svs/data";
 import { downloadCsv, toCsv } from "@/lib/svs/csv";
 import { formatScore, preferredHours, scoreFor } from "@/lib/svs/scoring";
-import { DAYS, SLOTS, type DayKey } from "@/lib/svs/types";
+import { activityDay, daysFor, SLOTS, type DayKey } from "@/lib/svs/types";
 
 
 export const Route = createFileRoute("/board")({
@@ -51,7 +52,10 @@ function Dot({ tag }: { tag: string }) {
 
 function Dashboard() {
   const { day } = Route.useSearch();
-  const meta = DAYS.find((d) => d.key === day)!;
+  const currentPeriod = useCurrentPeriod();
+  const order = currentPeriod.data?.monday_activity;
+  const activity = activityDay(day, order);
+  const meta = daysFor(order).find((d) => d.key === day)!;
   const roster = useRoster();
   const schedule = useSchedule();
   const weights = useWeights();
@@ -159,9 +163,9 @@ function Dashboard() {
     for (const a of appts) {
       const s = subs.get(a.player_id);
       const resource =
-        day === "monday"
+        activity === "monday"
           ? (s?.mon_normal_fc ?? 0) + (s?.mon_refined_fc ?? 0)
-          : day === "tuesday"
+          : activity === "tuesday"
             ? (s?.tue_shards ?? 0) + (s?.tue_speedup_days ?? 0) * (weights.data?.daysToMinutes ?? 1440)
             : (s?.thu_speedup_days ?? 0);
       const cur = map.get(a.alliance || "—") ?? { count: 0, resource: 0, score: 0 };
@@ -172,10 +176,10 @@ function Dashboard() {
       });
     }
     return [...map.entries()].sort((a, b) => b[1].count - a[1].count);
-  }, [appts, subs, day, weights.data]);
+  }, [appts, subs, activity, weights.data]);
 
   const resourceLabel =
-    day === "monday" ? "fire crystals" : day === "tuesday" ? " fc shards + minutes" : "speedup days";
+    activity === "monday" ? "fire crystals" : activity === "tuesday" ? " fc shards + minutes" : "speedup days";
 
   function exportDay() {
     const rows: (string | number)[][] = [
@@ -538,6 +542,7 @@ function Dashboard() {
       </div>
 
       <PlayerDetail
+        mondayActivity={order}
         playerId={selected}
         onClose={() => setSelected(null)}
         player={selected ? players[selected] : undefined}
@@ -545,8 +550,8 @@ function Dashboard() {
         scores={
           selected && subs.get(selected) && weights.data
             ? {
-                monday: scoreFor("monday", subs.get(selected)!, weights.data),
-                tuesday: scoreFor("tuesday", subs.get(selected)!, weights.data),
+                monday: scoreFor(activityDay("monday", order), subs.get(selected)!, weights.data),
+                tuesday: scoreFor(activityDay("tuesday", order), subs.get(selected)!, weights.data),
                 thursday: scoreFor("thursday", subs.get(selected)!, weights.data),
               }
             : undefined
@@ -554,8 +559,8 @@ function Dashboard() {
         hours={
           selected && subs.get(selected)
             ? {
-                monday: preferredHours("monday", subs.get(selected)!),
-                tuesday: preferredHours("tuesday", subs.get(selected)!),
+                monday: preferredHours(activityDay("monday", order), subs.get(selected)!),
+                tuesday: preferredHours(activityDay("tuesday", order), subs.get(selected)!),
                 thursday: preferredHours("thursday", subs.get(selected)!),
               }
             : undefined

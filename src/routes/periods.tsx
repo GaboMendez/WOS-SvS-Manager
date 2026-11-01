@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate, Outlet } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { useClosePeriod, useCreatePeriod, useCurrentPeriod, usePeriods } from "@/lib/svs/data";
+import { useClosePeriod, useCreatePeriod, useCurrentPeriod, useDeletePeriod, usePeriods } from "@/lib/svs/data";
 
 export const Route = createFileRoute("/periods")({
   head: () => ({
@@ -20,11 +20,17 @@ function PeriodsPage() {
   const currentPeriod = useCurrentPeriod();
   const createPeriod = useCreatePeriod();
   const closePeriod = useClosePeriod();
+  const deletePeriod = useDeletePeriod();
+  const [isLocal, setIsLocal] = useState(false);
+  useEffect(() => {
+    setIsLocal(["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname));
+  }, []);
 
   const [showCreate, setShowCreate] = useState(false);
   const [newPeriodName, setNewPeriodName] = useState("");
   const [newPeriodMonth, setNewPeriodMonth] = useState(new Date().getMonth() + 1);
   const [newPeriodYear, setNewPeriodYear] = useState(new Date().getFullYear());
+  const [mondayActivity, setMondayActivity] = useState<'construction' | 'research'>('construction');
 
   const handleCreate = async () => {
     if (!newPeriodName.trim()) {
@@ -36,6 +42,7 @@ function PeriodsPage() {
         name: newPeriodName,
         month: newPeriodMonth,
         year: newPeriodYear,
+        monday_activity: mondayActivity,
       });
       toast.success("Period created");
       setShowCreate(false);
@@ -58,6 +65,15 @@ function PeriodsPage() {
   };
 
   const periodList = periods.data ?? [];
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}" and all its data permanently? This cannot be undone.`)) return;
+    try {
+      await deletePeriod.mutateAsync(id);
+      toast.success("Period deleted");
+    } catch (e) {
+      toast.error(String(e));
+    }
+  };
   const closedPeriods = periodList.filter(p => p.is_closed);
 
   return (
@@ -92,6 +108,7 @@ function PeriodsPage() {
                   <p className="font-mono text-[11px] text-mut mt-0.5">
                     {currentPeriod.data.month}/{currentPeriod.data.year} · Active
                   </p>
+                  <p className="text-xs text-mut mt-1">Monday: {currentPeriod.data.monday_activity === 'research' ? 'Research' : 'Construction'} · Tuesday: {currentPeriod.data.monday_activity === 'research' ? 'Construction' : 'Research'} · Thursday: Training</p>
                 </div>
                 <button
                   onClick={() => handleClose(currentPeriod.data!.id)}
@@ -115,6 +132,13 @@ function PeriodsPage() {
         {showCreate && (
           <div className="rounded-md ring-1 ring-line bg-panel px-4 py-4">
             <h3 className="text-sm font-semibold mb-3">Create New Period</h3>
+            <label className="block text-xs text-mut mb-3">Activity order
+              <select value={mondayActivity} onChange={(e) => setMondayActivity(e.target.value as 'construction' | 'research')} className="block w-full mt-1 bg-panel2 rounded-md px-3 py-2 text-fg">
+                <option value="construction">Monday: Construction · Tuesday: Research</option>
+                <option value="research">Monday: Research · Tuesday: Construction</option>
+              </select>
+              <span>Thursday is troop training. The order is fixed for this period.</span>
+            </label>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-mut mb-1">Period Name</label>
@@ -195,12 +219,24 @@ function PeriodsPage() {
                       {period.month}/{period.year} · Closed {period.closed_at ? new Date(period.closed_at).toLocaleDateString() : ''}
                     </p>
                   </div>
+                  <div className="flex items-center gap-2">
                   <button
                     onClick={() => navigate({ to: "/periods/$periodId", params: { periodId: period.id }, search: { day: "monday" } })}
                     className="text-xs font-medium px-3 py-1.5 rounded-md ring-1 ring-line text-mut hover:text-fg"
                   >
                     View
                   </button>
+                  {isLocal && (
+                    <button
+                      onClick={() => handleDelete(period.id, period.name)}
+                      disabled={deletePeriod.isPending}
+                      aria-label={`Delete ${period.name}`}
+                      className="text-xs font-medium px-3 py-1.5 rounded-md ring-1 ring-warn text-warn hover:bg-warn/10 disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  )}
+                  </div>
                 </div>
               ))}
             </div>

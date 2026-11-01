@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import * as db from './db.js';
+import { DB_PATH } from './path.js';
 
 const app = express();
 app.use(cors());
@@ -49,9 +50,12 @@ app.get('/api/periods/current', handleError(async (_req, res) => {
 }));
 
 app.post('/api/periods', handleError(async (req, res) => {
-  const { name, month, year } = req.body;
+  const { name, month, year, monday_activity = 'construction' } = req.body;
+  if (!['construction', 'research'].includes(monday_activity)) {
+    res.status(400).json({ error: 'Invalid Monday activity' }); return;
+  }
   const id = crypto.randomUUID();
-  await db.createPeriod({ id, name, month, year });
+  await db.createPeriod({ id, name, month, year, monday_activity });
   res.json({ success: true, id });
 }));
 
@@ -61,7 +65,19 @@ app.post('/api/periods/:id/close', handleError(async (req, res) => {
 }));
 
 app.delete('/api/periods/:id', handleError(async (req, res) => {
-  await db.deletePeriod(req.params.id);
+  const address = req.socket.remoteAddress;
+  const origin = req.get('origin');
+  let localOrigin = !origin;
+  if (origin) {
+    try { localOrigin = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(origin).hostname); } catch { localOrigin = false; }
+  }
+  if (!DB_PATH.startsWith('file:') || !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address || '') || !localOrigin) {
+    res.status(403).json({ error: 'Period deletion is only available locally' }); return;
+  }
+  const results = await db.deletePeriod(req.params.id);
+  if (!results[results.length - 1].rowsAffected) {
+    res.status(404).json({ error: 'Closed period not found' }); return;
+  }
   res.json({ success: true });
 }));
 

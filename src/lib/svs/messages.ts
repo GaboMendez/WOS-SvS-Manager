@@ -1,4 +1,4 @@
-import type { Appointment, DayKey, Player } from "./types";
+import { daysFor, type Appointment, type DayKey, type MondayActivity, type Player } from "./types";
 
 export type AllianceMessage = {
   alliance: string;
@@ -8,11 +8,11 @@ export type AllianceMessage = {
   text: string;
 };
 
-const DAY_HEADERS: Record<DayKey, string> = {
-  monday: "Day 1 - Construction",
-  tuesday: "Day 2 - Research",
-  thursday: "Day 4 - Training",
-};
+function dayHeader(day: DayKey, order: MondayActivity): string {
+  const number = day === 'monday' ? 1 : day === 'tuesday' ? 2 : 4;
+  const focus = daysFor(order).find(d => d.key === day)!.focus;
+  return `Day ${number} - ${focus === 'Troop Training' ? 'Training' : focus}`;
+}
 
 /** 30 minutes after `slot`, wrapping past 23:30 back to 00:00. */
 function slotEnd(slot: string): string {
@@ -32,8 +32,9 @@ function chunkHeader(
   alliance: string,
   index: number | string,
   total: number | string,
+  order: MondayActivity,
 ): string {
-  return `${DAY_HEADERS[day]}\n${alliance} [${index}/${total}]`;
+  return `${dayHeader(day, order)}\n${alliance} [${index}/${total}]`;
 }
 
 /**
@@ -46,8 +47,9 @@ function packAlliance(
   alliance: string,
   entries: string[],
   charLimit: number,
+  order: MondayActivity,
 ): string[][] {
-  const headerLen = chunkHeader(day, alliance, "99", "99").length;
+  const headerLen = chunkHeader(day, alliance, "99", "99", order).length;
   const chunks: string[][] = [];
   let current: string[] = [];
   let currentLen = headerLen;
@@ -71,6 +73,7 @@ export function buildAllianceMessages(
   appointments: Appointment[],
   playersById: Record<string, Player>,
   charLimit = 250,
+  order: MondayActivity = 'construction',
 ): AllianceMessage[] {
   const byAlliance = new Map<string, Appointment[]>();
   for (const a of appointments) {
@@ -85,14 +88,14 @@ export function buildAllianceMessages(
   for (const [alliance, appts] of alliances) {
     const sorted = [...appts].sort((a, b) => a.slot.localeCompare(b.slot));
     const entries = sorted.map((a) => entryFor(a, playersById[a.player_id]?.name ?? a.player_id));
-    const chunks = packAlliance(day, alliance, entries, charLimit);
+    const chunks = packAlliance(day, alliance, entries, charLimit, order);
     chunks.forEach((chunk, i) => {
       result.push({
         alliance,
         index: i + 1,
         total: chunks.length,
         count: chunk.length,
-        text: `${chunkHeader(day, alliance, i + 1, chunks.length)}\n${chunk.join("\n")}`,
+        text: `${chunkHeader(day, alliance, i + 1, chunks.length, order)}\n${chunk.join("\n")}`,
       });
     });
   }

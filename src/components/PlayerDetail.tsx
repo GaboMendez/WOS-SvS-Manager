@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatScore } from "@/lib/svs/scoring";
-import type { DayKey, Player, Submission } from "@/lib/svs/types";
-import { DAYS } from "@/lib/svs/types";
+import type { DayKey, MondayActivity, Player, Submission } from "@/lib/svs/types";
+import { activityDay, daysFor } from "@/lib/svs/types";
 
 function Row({ label, value }: { label: string; value: string | number }) {
   return (
@@ -18,6 +18,7 @@ export function PlayerDetail({
   submission,
   scores,
   hours,
+  mondayActivity,
   onClose,
 }: {
   playerId: string | null;
@@ -25,6 +26,7 @@ export function PlayerDetail({
   submission?: Submission | undefined;
   scores?: Record<DayKey, number> | undefined;
   hours?: Record<DayKey, number[]> | undefined;
+  mondayActivity?: MondayActivity | undefined;
   onClose: () => void;
 }) {
   const open = Boolean(playerId);
@@ -44,7 +46,7 @@ export function PlayerDetail({
           <p className="font-mono text-[11px] text-mut">No submission on file.</p>
         ) : (
           <div className="space-y-4">
-            {DAYS.map((d) => (
+            {daysFor(mondayActivity).map((d) => (
               <div key={d.key} className="rounded-md ring-1 ring-line bg-panel2 px-3 py-2.5">
                 <div className="flex items-center justify-between mb-1.5">
                   <p className="text-sm font-medium">
@@ -54,7 +56,7 @@ export function PlayerDetail({
                     {scores ? formatScore(scores[d.key]) : "—"}
                   </span>
                 </div>
-                {d.key === "monday" && (
+                {activityDay(d.key, mondayActivity) === "monday" && (
                   <>
                     <Row label="Requested" value={submission.requests_monday ? "Yes" : "No"} />
                     <Row label="Normal fire crystals" value={submission.mon_normal_fc} />
@@ -62,7 +64,7 @@ export function PlayerDetail({
                     <Row label="Construction speedups (days)" value={submission.mon_speedup_days} />
                   </>
                 )}
-                {d.key === "tuesday" && (
+                {activityDay(d.key, mondayActivity) === "tuesday" && (
                   <>
                     <Row label="Requested" value={submission.requests_tuesday ? "Yes" : "No"} />
                     <Row label="Fire crystal shards" value={submission.tue_shards} />

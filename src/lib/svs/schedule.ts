@@ -1,18 +1,32 @@
 import { preferredHours, requestsDay, scoreFor } from "./scoring";
 import {
   SLOTS,
+  DAYS,
+  activityDay,
   type Appointment,
   type DayKey,
   type Player,
   type Submission,
   type WaitlistEntry,
   type Weights,
+  type MondayActivity,
 } from "./types";
 
 export type DayResult = {
   appointments: Appointment[];
   waitlist: WaitlistEntry[];
 };
+
+/** Schedule each activity on its period's actual weekday. */
+export function schedulePeriod(submissions: Submission[], players: Record<string, Player>, weights: Weights, order: MondayActivity = "construction"): DayResult {
+  const result: DayResult = { appointments: [], waitlist: [] };
+  for (const day of DAYS) {
+    const activity = scheduleDay(activityDay(day.key, order), submissions, players, weights);
+    result.appointments.push(...activity.appointments.map(a => ({ ...a, day: day.key })));
+    result.waitlist.push(...activity.waitlist.map(w => ({ ...w, day: day.key })));
+  }
+  return result;
+}
 
 /**
  * Deterministic scheduler: same input + same weights = same output.

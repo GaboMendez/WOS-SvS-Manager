@@ -25,18 +25,18 @@ export const Route = createFileRoute("/scoring")({
 });
 
 const FIELDS: { key: keyof Weights; label: string; hint: string }[] = [
-  { key: "normalFireCrystal", label: "Normal fire crystal", hint: "Monday · points each" },
-  { key: "refinedFireCrystal", label: "Refined fire crystal", hint: "Monday · points each" },
+  { key: "normalFireCrystal", label: "Normal fire crystal", hint: "Construction · points each" },
+  { key: "refinedFireCrystal", label: "Refined fire crystal", hint: "Construction · points each" },
   {
     key: "constructionSpeedupMinute",
     label: "Construction speedup minute",
-    hint: "Monday · points per minute",
+    hint: "Construction · points per minute",
   },
-  { key: "fireCrystalShard", label: "Fire crystal shard", hint: "Tuesday · points each" },
+  { key: "fireCrystalShard", label: "Fire crystal shard", hint: "Research · points each" },
   {
     key: "researchSpeedupMinute",
     label: "Research speedup minute",
-    hint: "Tuesday · points per minute",
+    hint: "Research · points per minute",
   },
   {
     key: "daysToMinutes",
@@ -132,8 +132,8 @@ function ScoringPage() {
         )}
 
         <p className="font-mono text-[11px] text-mut pt-2">
-          Monday = fire crystals + refined fire crystals + construction speedups. <br></br>
-          Tuesday = fire crystal shards + research speedups. <br></br> Thursday = training speedups.{" "}
+          Construction = fire crystals + refined fire crystals + construction speedups. <br></br>
+          Research = fire crystal shards + research speedups. <br></br> Training = training speedups.{" "}
           <br></br>
           <p className="font-mono text-[11px] text-amber-400/90 pt-1">
             Ties go to the earliest submission.

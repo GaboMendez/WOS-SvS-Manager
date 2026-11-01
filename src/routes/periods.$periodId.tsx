@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { PlayerDetail } from "@/components/PlayerDetail";
 import { useHistoricalData, usePeriods } from "@/lib/svs/data";
 import { formatScore } from "@/lib/svs/scoring";
-import { DAYS, SLOTS, type DayKey, type Player, type Submission } from "@/lib/svs/types";
+import { daysFor, SLOTS, type DayKey, type Player, type Submission } from "@/lib/svs/types";
 
 export const Route = createFileRoute("/periods/$periodId")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -182,7 +182,7 @@ function HistoricalView() {
 
         {/* Day Tabs */}
         <div className="border-b border-line flex gap-1">
-          {DAYS.map((d) => (
+          {daysFor(period.monday_activity).map((d) => (
             <Link
               key={d.key}
               to="/periods/$periodId"
@@ -359,6 +359,7 @@ function HistoricalView() {
 
       {/* Player Detail Modal */}
       <PlayerDetail
+        mondayActivity={period.monday_activity}
         playerId={selectedPlayer}
         player={selectedPlayerData}
         submission={selectedSubmission}

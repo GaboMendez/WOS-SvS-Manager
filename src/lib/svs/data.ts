@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Period } from "@/integrations/api/client";
-import { scheduleDay } from "./schedule";
+import { schedulePeriod } from "./schedule";
 import {
   DAYS,
   DEFAULT_WEIGHTS,
@@ -87,7 +87,7 @@ export function useCurrentPeriod() {
 export function useCreatePeriod() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (period: { name: string; month: number; year: number }) => {
+    mutationFn: async (period: { name: string; month: number; year: number; monday_activity: 'construction' | 'research' }) => {
       const result = await api.createPeriod(period);
       return result;
     },
@@ -107,6 +107,16 @@ export function useClosePeriod() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["periods"] });
       qc.invalidateQueries({ queryKey: ["currentPeriod"] });
+    },
+  });
+}
+
+export function useDeletePeriod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (periodId: string) => api.deletePeriod(periodId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["periods"] });
     },
   });
 }
@@ -265,18 +275,7 @@ export function useRecompute() {
       const byId: Record<string, Player> = {};
       for (const p of (players ?? []) as Player[]) byId[p.player_id] = p;
 
-      const appointments: Appointment[] = [];
-      const waitlist: WaitlistEntry[] = [];
-      for (const d of DAYS) {
-        const res = scheduleDay(
-          d.key,
-          subs as unknown as Submission[],
-          byId,
-          weights,
-        );
-        appointments.push(...res.appointments);
-        waitlist.push(...res.waitlist);
-      }
+      const { appointments, waitlist } = schedulePeriod(subs as unknown as Submission[], byId, weights, currentPeriod.data?.monday_activity);
 
       await api.deleteAllAppointments(periodId);
       await api.deleteAllWaitlist(periodId);

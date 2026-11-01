@@ -15,9 +15,9 @@ import {
   YAxis,
 } from "recharts";
 import { AppShell } from "@/components/AppShell";
-import { useAllianceLookup, useRoster, useSchedule } from "@/lib/svs/data";
+import { useAllianceLookup, useCurrentPeriod, useRoster, useSchedule } from "@/lib/svs/data";
 import { formatScore, requestsDay } from "@/lib/svs/scoring";
-import { DAYS, SLOTS, type DayKey } from "@/lib/svs/types";
+import { activityDay, daysFor, DAYS, SLOTS, type DayKey } from "@/lib/svs/types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -103,6 +103,8 @@ function ChartCard({
 }
 
 function Overview() {
+  const order = useCurrentPeriod().data?.monday_activity;
+  const days = useMemo(() => daysFor(order), [order]);
   const roster = useRoster();
   const schedule = useSchedule();
   const allianceLookup = useAllianceLookup();
@@ -114,7 +116,7 @@ function Overview() {
 
   const fillByDay = useMemo(
     () =>
-      DAYS.map((d) => {
+      days.map((d) => {
         const filled = appointments.filter((a) => a.day === d.key).length;
         return {
           day: d.label,
@@ -123,16 +125,16 @@ function Overview() {
           waitlisted: waitlist.filter((w) => w.day === d.key).length,
         };
       }),
-    [appointments, waitlist],
+    [appointments, waitlist, days],
   );
 
   const requestsByDay = useMemo(
     () =>
-      DAYS.map((d) => ({
+      days.map((d) => ({
         day: d.label,
-        requested: submissions.filter((s) => requestsDay(d.key, s)).length,
+        requested: submissions.filter((s) => requestsDay(activityDay(d.key, order), s)).length,
       })),
-    [submissions],
+    [submissions, days, order],
   );
 
   const playersByAlliance = useMemo(() => {
@@ -315,7 +317,7 @@ function Overview() {
                   wrapperStyle={{ fontSize: 11 }}
                   formatter={(value) => <span style={LEGEND_TEXT_STYLE}>{value}</span>}
                 />
-                {DAYS.map((d, i) => (
+                {days.map((d, i) => (
                   <Bar
                     key={d.key}
                     dataKey={d.key}

@@ -49,10 +49,10 @@ export function getPeriod(id: string) {
   return db.execute('SELECT * FROM periods WHERE id = ?', [id]);
 }
 
-export function createPeriod(period: { id: string; name: string; month: number; year: number }) {
+export function createPeriod(period: { id: string; name: string; month: number; year: number; monday_activity: string }) {
   return db.execute(
-    'INSERT INTO periods (id, name, month, year, is_closed, created_at) VALUES (?, ?, ?, ?, 0, ?)',
-    [period.id, period.name, period.month, period.year, new Date().toISOString()]
+    'INSERT INTO periods (id, name, month, year, is_closed, created_at, monday_activity) VALUES (?, ?, ?, ?, 0, ?, ?)',
+    [period.id, period.name, period.month, period.year, new Date().toISOString(), period.monday_activity]
   );
 }
 
@@ -64,14 +64,15 @@ export function closePeriod(id: string) {
 }
 
 export function deletePeriod(id: string) {
-  // Delete all related data first (due to foreign key constraints)
-  db.execute('DELETE FROM waitlist WHERE period_id = ?', [id]);
-  db.execute('DELETE FROM appointments WHERE period_id = ?', [id]);
-  db.execute('DELETE FROM submissions WHERE period_id = ?', [id]);
-  db.execute('DELETE FROM players WHERE period_id = ?', [id]);
-  db.execute('DELETE FROM imports WHERE period_id = ?', [id]);
-  // Finally delete the period
-  return db.execute('DELETE FROM periods WHERE id = ?', [id]);
+  // Delete the archive and all of its data together, only if it is closed.
+  const tables = ['waitlist', 'appointments', 'submissions', 'slingshot_entries', 'players', 'imports'];
+  return db.batch([
+    ...tables.map(table => ({
+      sql: `DELETE FROM ${table} WHERE period_id = ? AND EXISTS (SELECT 1 FROM periods WHERE id = ? AND is_closed = 1)`,
+      args: [id, id],
+    })),
+    { sql: 'DELETE FROM periods WHERE id = ? AND is_closed = 1', args: [id] },
+  ], 'write');
 }
 
 // ============ PLAYERS ============

@@ -3,8 +3,9 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PlayerDetail } from "@/components/PlayerDetail";
-import { useAllianceLookup, useClearAll, useRoster, useWeights } from "@/lib/svs/data";
-import { formatScore, preferredHours, scoreFor } from "@/lib/svs/scoring";
+import { useAllianceLookup, useClearAll, useCurrentPeriod, useRoster, useWeights } from "@/lib/svs/data";
+import { formatScore, preferredHours, requestsDay, scoreFor } from "@/lib/svs/scoring";
+import { activityDay } from "@/lib/svs/types";
 
 
 export const Route = createFileRoute("/players")({
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/players")({
 });
 
 function PlayersPage() {
+  const order = useCurrentPeriod().data?.monday_activity;
   const roster = useRoster();
   const weights = useWeights();
   const allianceLookup = useAllianceLookup();
@@ -73,12 +75,14 @@ function PlayersPage() {
       if (sortBy === "name") {
         return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
       } else if (sortBy === "mon") {
-        const scoreA = sA && w && sA.requests_monday ? scoreFor("monday", sA, w) : 0;
-        const scoreB = sB && w && sB.requests_monday ? scoreFor("monday", sB, w) : 0;
+        const key = activityDay("monday", order);
+        const scoreA = sA && w && requestsDay(key, sA) ? scoreFor(key, sA, w) : 0;
+        const scoreB = sB && w && requestsDay(key, sB) ? scoreFor(key, sB, w) : 0;
         return scoreB - scoreA;
       } else if (sortBy === "tue") {
-        const scoreA = sA && w && sA.requests_tuesday ? scoreFor("tuesday", sA, w) : 0;
-        const scoreB = sB && w && sB.requests_tuesday ? scoreFor("tuesday", sB, w) : 0;
+        const key = activityDay("tuesday", order);
+        const scoreA = sA && w && requestsDay(key, sA) ? scoreFor(key, sA, w) : 0;
+        const scoreB = sB && w && requestsDay(key, sB) ? scoreFor(key, sB, w) : 0;
         return scoreB - scoreA;
       } else if (sortBy === "thu") {
         const scoreA = sA && w && sA.requests_thursday ? scoreFor("thursday", sA, w) : 0;
@@ -89,7 +93,7 @@ function PlayersPage() {
     });
 
     return result;
-  }, [roster.data, q, allianceFilter, sortBy, subs, weights.data]);
+  }, [roster.data, q, allianceFilter, sortBy, subs, weights.data, order]);
 
   return (
     <AppShell>
@@ -179,10 +183,10 @@ function PlayersPage() {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {s && w && s.requests_monday ? formatScore(scoreFor("monday", s, w)) : "—"}
+                      {s && w && requestsDay(activityDay("monday", order), s) ? formatScore(scoreFor(activityDay("monday", order), s, w)) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {s && w && s.requests_tuesday ? formatScore(scoreFor("tuesday", s, w)) : "—"}
+                      {s && w && requestsDay(activityDay("tuesday", order), s) ? formatScore(scoreFor(activityDay("tuesday", order), s, w)) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
                       {s && w && s.requests_thursday ? formatScore(scoreFor("thursday", s, w)) : "—"}
@@ -203,6 +207,7 @@ function PlayersPage() {
       </div>
 
       <PlayerDetail
+        mondayActivity={order}
         playerId={selected}
         onClose={() => setSelected(null)}
         player={selected ? roster.data?.playersById[selected] : undefined}
@@ -210,8 +215,8 @@ function PlayersPage() {
         scores={
           selected && subs.get(selected) && weights.data
             ? {
-                monday: scoreFor("monday", subs.get(selected)!, weights.data),
-                tuesday: scoreFor("tuesday", subs.get(selected)!, weights.data),
+                monday: scoreFor(activityDay("monday", order), subs.get(selected)!, weights.data),
+                tuesday: scoreFor(activityDay("tuesday", order), subs.get(selected)!, weights.data),
                 thursday: scoreFor("thursday", subs.get(selected)!, weights.data),
               }
             : undefined
@@ -219,8 +224,8 @@ function PlayersPage() {
         hours={
           selected && subs.get(selected)
             ? {
-                monday: preferredHours("monday", subs.get(selected)!),
-                tuesday: preferredHours("tuesday", subs.get(selected)!),
+                monday: preferredHours(activityDay("monday", order), subs.get(selected)!),
+                tuesday: preferredHours(activityDay("tuesday", order), subs.get(selected)!),
                 thursday: preferredHours("thursday", subs.get(selected)!),
               }
             : undefined

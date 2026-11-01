@@ -30,6 +30,7 @@ export interface Period {
   name: string;
   month: number;
   year: number;
+  monday_activity: 'construction' | 'research';
   is_closed: number;
   created_at: string;
   closed_at: string | null;
@@ -39,13 +40,15 @@ export const api = {
   // Periods
   getPeriods: () => fetchJson<Period[]>(`${API_BASE}/periods`),
   getCurrentPeriod: () => fetchJson<Period | null>(`${API_BASE}/periods/current`),
-  createPeriod: (period: { name: string; month: number; year: number }) =>
+  createPeriod: (period: { name: string; month: number; year: number; monday_activity: 'construction' | 'research' }) =>
     fetchJson<{ success: boolean; id: string }>(`${API_BASE}/periods`, {
       method: 'POST',
       body: JSON.stringify(period),
     }),
   closePeriod: (id: string) =>
     fetchJson<{ success: boolean }>(`${API_BASE}/periods/${id}/close`, { method: 'POST' }),
+  deletePeriod: (id: string) =>
+    fetchJson<{ success: boolean }>(`${API_BASE}/periods/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // Players
   getPlayers: (periodId?: string) => fetchJson<unknown[]>(buildUrl('/players', periodId)),

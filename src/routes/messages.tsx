@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { useAllianceLookup, useRoster, useSchedule } from "@/lib/svs/data";
+import { useAllianceLookup, useCurrentPeriod, useRoster, useSchedule } from "@/lib/svs/data";
 import { buildAllianceMessages } from "@/lib/svs/messages";
-import type { DayKey } from "@/lib/svs/types";
+import { daysFor, type DayKey } from "@/lib/svs/types";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({
@@ -24,15 +24,10 @@ export const Route = createFileRoute("/messages")({
   component: MessagesPage,
 });
 
-const DAY_OPTIONS: { key: DayKey; label: string }[] = [
-  { key: "monday", label: "1 — Construction" },
-  { key: "tuesday", label: "2 — Research" },
-  { key: "thursday", label: "4 — Training" },
-];
-
 const CHAR_LIMIT = 250;
 
 function MessagesPage() {
+  const order = useCurrentPeriod().data?.monday_activity;
   const roster = useRoster();
   const schedule = useSchedule();
   const allianceLookup = useAllianceLookup();
@@ -45,8 +40,8 @@ function MessagesPage() {
   );
   const playersById = roster.data?.playersById ?? {};
   const messages = useMemo(
-    () => buildAllianceMessages(day, appts, playersById, CHAR_LIMIT),
-    [day, appts, playersById],
+    () => buildAllianceMessages(day, appts, playersById, CHAR_LIMIT, order),
+    [day, appts, playersById, order],
   );
 
   const allianceOptions = useMemo(
@@ -85,9 +80,9 @@ function MessagesPage() {
             onChange={(e) => setDay(e.target.value as DayKey)}
             className="text-xs bg-panel ring-1 ring-line rounded-md px-2 py-1.5 outline-none focus:ring-primary/60"
           >
-            {DAY_OPTIONS.map((o) => (
+            {daysFor(order).map((o) => (
               <option key={o.key} value={o.key}>
-                {o.label}
+                {o.label} — {o.focus}
               </option>
             ))}
           </select>

@@ -1,4 +1,17 @@
 export type DayKey = "monday" | "tuesday" | "thursday";
+export type MondayActivity = "construction" | "research";
+
+/** Submission fields retain their original activity meaning for backwards compatibility. */
+export function activityDay(day: DayKey, mondayActivity: MondayActivity = "construction"): DayKey {
+  if (mondayActivity === "research" && day !== "thursday") {
+    return day === "monday" ? "tuesday" : "monday";
+  }
+  return day;
+}
+
+export function daysFor(mondayActivity: MondayActivity = "construction") {
+  return DAYS.map((d) => ({ ...d, focus: DAYS.find((a) => a.key === activityDay(d.key, mondayActivity))!.focus }));
+}
 
 export const DAYS: { key: DayKey; label: string; focus: string }[] = [
   { key: "monday", label: "Monday", focus: "Construction" },
