@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Github, Menu, X } from "lucide-react";
+import { Coffee, Github, Menu, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { DAYS, type DayKey } from "@/lib/svs/types";
 
@@ -124,10 +124,19 @@ export function AppShell({
         </PageLink>
       </nav>
       <a
+        href="https://www.paypal.com/donate/?business=BQW53K5JK3SRG&no_recurring=0&item_name=Your+support+inspires+me+to+keep+creating+and+sharing.+Every+contribution+means+the+world.+Thanks%2C+I+really+appreciate+it%E2%9D%A4%EF%B8%8F&currency_code=USD"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-auto mx-3 mb-3 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+      >
+        <Coffee className="size-4" aria-hidden="true" />
+        Buy me a coffee
+      </a>
+      <a
         href="https://github.com/GaboMendez/WOS-SvS-Manager"
         target="_blank"
         rel="noreferrer"
-        className="mt-auto flex items-center gap-2 px-4 py-3 border-t border-line text-xs font-medium text-mut hover:text-fg transition-colors"
+        className="flex items-center gap-2 px-4 py-3 border-t border-line text-xs font-medium text-mut hover:text-fg transition-colors"
       >
         <Github className="size-3.5" />
         GitHub repository
