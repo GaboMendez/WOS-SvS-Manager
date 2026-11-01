@@ -12,9 +12,9 @@ function railClass(active: boolean) {
   );
 }
 
-function DayLink({ day, label, active }: { day: DayKey; label: string; active: boolean }) {
+function DayLink({ day, label, active, onClick }: { day: DayKey; label: string; active: boolean; onClick?: () => void }) {
   return (
-    <Link to="/board" search={{ day }} className={railClass(active)}>
+    <Link to="/board" search={{ day }} className={railClass(active)} onClick={onClick}>
       <span>{label}</span>
       {active ? <span className="font-mono text-[10px] text-primary">LIVE</span> : null}
     </Link>
@@ -27,7 +27,7 @@ function PageLink({
   children,
   onClick,
 }: {
-  to: "/" | "/import" | "/players" | "/scoring" | "/messages" | "/periods";
+  to: "/" | "/import" | "/players" | "/scoring" | "/messages" | "/periods" | "/slingshot";
   active: boolean;
   children: ReactNode;
   onClick?: () => void;
@@ -54,7 +54,8 @@ export function AppShell({
 
   const nav = (
     <>
-      <Link to="/" className="px-4 py-4 border-b border-line flex items-center gap-2.5">
+      <div className="shrink-0 px-4 py-4 border-b border-line flex items-center gap-2.5">
+      <Link to="/" onClick={() => setMobileOpen(false)} className="flex flex-1 items-center gap-2.5">
         <div className="size-10 grid place-items-center bg-primary text-primary-foreground font-bold text-sm">
           3496
         </div>
@@ -63,10 +64,11 @@ export function AppShell({
           <p className="text-[12px] font-mono text-mut mt-1.5">DUTY ROSTER</p>
         </div>
       </Link>
-      <nav className="py-3 flex flex-col gap-0.5">
-        <div className="px-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
-          Home
-        </div>
+      <button type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="md:hidden inline-flex size-9 items-center justify-center rounded-md text-mut hover:text-fg">
+        <X className="size-4" />
+      </button>
+      </div>
+      <nav className="py-3 flex shrink-0 flex-col gap-0.5">
         <PageLink to="/" active={pathname === "/"}
           onClick={() => setMobileOpen(false)}
         >
@@ -81,18 +83,16 @@ export function AppShell({
             day={d.key}
             label={d.label}
             active={pathname === "/board" && activeDay === d.key}
+            onClick={() => setMobileOpen(false)}
           />
         ))}
-        <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
-          Messages
-        </div>
         <PageLink to="/messages" active={pathname === "/messages"}
           onClick={() => setMobileOpen(false)}
         >
           Summaries
         </PageLink>
         <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
-          Console
+          Manage
         </div>
         <PageLink to="/import" active={pathname === "/import"}
           onClick={() => setMobileOpen(false)}
@@ -114,9 +114,6 @@ export function AppShell({
         >
           Slingshot
         </PageLink>
-        <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-widest text-mut">
-          History
-        </div>
         <PageLink to="/periods" active={pathname === "/periods" || pathname.startsWith("/periods/")}
           onClick={() => setMobileOpen(false)}
         >
@@ -127,7 +124,7 @@ export function AppShell({
         href="https://www.paypal.com/donate/?business=BQW53K5JK3SRG&no_recurring=0&item_name=Your+support+inspires+me+to+keep+creating+and+sharing.+Every+contribution+means+the+world.+Thanks%2C+I+really+appreciate+it%E2%9D%A4%EF%B8%8F&currency_code=USD"
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-auto mx-3 mb-3 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+        className="mt-auto mx-3 mb-3 inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
       >
         <Coffee className="size-4" aria-hidden="true" />
         Buy me a coffee
@@ -136,7 +133,7 @@ export function AppShell({
         href="https://github.com/GaboMendez/WOS-SvS-Manager"
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-2 px-4 py-3 border-t border-line text-xs font-medium text-mut hover:text-fg transition-colors"
+        className="flex shrink-0 items-center gap-2 px-4 py-3 border-t border-line text-xs font-medium text-mut hover:text-fg transition-colors"
       >
         <Github className="size-3.5" />
         GitHub repository
@@ -149,7 +146,9 @@ export function AppShell({
       <div className="md:hidden sticky top-0 z-40 border-b border-line bg-panel px-3 py-2 flex items-center justify-between">
         <button
           type="button"
-          aria-label="Open navigation"
+          aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={mobileOpen}
+          aria-controls="main-navigation"
           onClick={() => setMobileOpen((open) => !open)}
           className="inline-flex size-9 items-center justify-center rounded-md border border-line text-fg"
         >
@@ -178,12 +177,13 @@ export function AppShell({
         }
       >
         <aside
+          id="main-navigation"
           className={
             "fixed inset-y-0 left-0 z-40 w-[85vw] max-w-[260px] border-r border-line bg-panel transition-transform duration-200 md:static md:w-auto md:translate-x-0 md:shadow-none " +
             (mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0")
           }
         >
-          <div className="flex h-full flex-col md:sticky md:top-0 md:h-screen md:overflow-y-auto">{nav}</div>
+          <div className="flex h-full max-h-dvh flex-col overflow-y-auto overscroll-contain md:sticky md:top-0 md:h-dvh">{nav}</div>
         </aside>
 
         <main className="min-w-0 bg-ink md:col-start-2">{children}</main>
