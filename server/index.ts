@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import * as db from './db.js';
-import { DB_PATH } from './path.js';
 
 const app = express();
 app.use(cors());
@@ -65,13 +64,12 @@ app.post('/api/periods/:id/close', handleError(async (req, res) => {
 }));
 
 app.delete('/api/periods/:id', handleError(async (req, res) => {
-  const address = req.socket.remoteAddress;
   const origin = req.get('origin');
-  let localOrigin = !origin;
+  let localOrigin = false;
   if (origin) {
     try { localOrigin = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(origin).hostname); } catch { localOrigin = false; }
   }
-  if (!DB_PATH.startsWith('file:') || !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address || '') || !localOrigin) {
+  if (!localOrigin) {
     res.status(403).json({ error: 'Period deletion is only available locally' }); return;
   }
   const results = await db.deletePeriod(req.params.id);
