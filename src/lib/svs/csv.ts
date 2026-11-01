@@ -16,18 +16,18 @@ const yes = (v: string) => /^(y|yes|true|1)/i.test((v ?? "").trim());
 
 // Parse European date format (DD.MM.YYYY HH:MM:SS) and other common formats
 function parseTimestamp(ts: string): number {
-  // Try standard Date.parse first
-  let parsed = Date.parse(ts);
-  if (Number.isFinite(parsed)) return parsed;
-
-  // Try European format DD.MM.YYYY HH:MM:SS or DD.MM.YYYY
+  // Parse European dates first: Date.parse may silently treat DD.MM as MM.DD.
   const euroMatch = ts.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
   if (euroMatch) {
     const [, day, month, year, hour = 0, minute = 0, second = 0] = euroMatch;
-    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)).getTime();
+    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+    if (date.getFullYear() !== Number(year) || date.getMonth() !== Number(month) - 1 ||
+        date.getDate() !== Number(day) || date.getHours() !== Number(hour) ||
+        date.getMinutes() !== Number(minute) || date.getSeconds() !== Number(second)) return NaN;
+    return date.getTime();
   }
 
-  return NaN;
+  return Date.parse(ts);
 }
 
 const num = (v: string): number => {
